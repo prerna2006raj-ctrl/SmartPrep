@@ -37,8 +37,8 @@ npm install
 
 ### Create a `.env` file in `server` with:
 
-MONGO_URI=mongodb://prerna2006raj_db_user:PRER2006@ac-ud8ep6u-shard-00-00.5iqgfot.mongodb.net:27017,ac-ud8ep6u-shard-00-01.5iqgfot.mongodb.net:27017,ac-ud8ep6u-shard-00-02.5iqgfot.mongodb.net:27017/smartprep?ssl=true&replicaSet=atlas-dpva9h-shard-0&authSource=admin&appName=Cluster0
-JWT_SECRET=anylongrandomstringyouwant12345
+MONGO_URI=`your_mongodb_connection_string`
+JWT_SECRET=`your_jwt_secret`
 GEMINI_API_KEY=`your_gemini_api_key`
 
 Run the server:
