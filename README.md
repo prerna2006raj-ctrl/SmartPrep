@@ -1,16 +1,64 @@
-# React + Vite
+# SmartPrep 🎯
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+SmartPrep is a full-stack platform built to help students preparing for Indian competitive exams (UPSC, SSC, Banking, Railways, and more) access previous year question papers, curated video resources, mock tests, and AI-powered study tools — all in one place.
 
-Currently, two official plugins are available:
+## ✨ Features
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- 🔐 **Authentication** — Secure signup/login with JWT tokens and bcrypt password hashing
+- 📄 **Question Papers** — Browse and access previous year papers by exam and subject
+- 🎥 **Video Resources** — Curated YouTube videos filterable by exam category
+- 📝 **Mock Tests** — Take timed mock tests with instant scoring and answer review
+- 🔖 **Bookmarks** — Save papers for quick access later (tied to your account)
+- 🤖 **AI Doubt Solver** — Ask any exam-related doubt and get a clear, tutor-style explanation (powered by Gemini)
+- 📊 **AI Answer Evaluator** — Get rubric-based feedback on written answers, similar to UPSC Mains evaluation — scored on structure, relevance, content depth, and word limit, with a suggested model answer outline
 
-## React Compiler
+## 🛠️ Tech Stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+**Frontend:** React (Vite), Tailwind CSS, React Router, Axios
+**Backend:** Node.js, Express.js
+**Database:** MongoDB (Mongoose)
+**Authentication:** JWT, bcrypt
+**AI:** Google Gemini API
 
-## Expanding the Oxlint configuration
+## 🚀 Getting Started
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and Oxlint's TypeScript related rules in your project.
+### Prerequisites
+
+- Node.js installed
+- A MongoDB Atlas account (or local MongoDB)
+- A Gemini API key from [Google AI Studio](https://aistudio.google.com/apikey)
+
+### Backend Setup
+
+```bash
+cd server
+npm install
+```
+
+### Create a `.env` file in `server` with:
+
+MONGO_URI=your_mongodb_connection_string
+JWT_SECRET=your_jwt_secret
+GEMINI_API_KEY=your_gemini_api_key
+
+Run the server:
+
+```bash
+node index.js
+```
+
+### Frontend Setup
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+## 📌 Project Status
+
+Actively being developed as a placement/portfolio project.
+
+## 👤 Author
+
+Prerna Raj — BCA student, Chitkara University
