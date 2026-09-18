@@ -1,6 +1,12 @@
 # SmartPrep 🎯
 
 SmartPrep is a full-stack platform built to help students preparing for Indian competitive exams (UPSC, SSC, Banking, Railways, and more) access previous year question papers, curated video resources, mock tests, and AI-powered study tools — all in one place.
+[![Live Demo](https://img.shields.io/badge/demo-live-brightgreen)](https://your-project.vercel.app)
+🔗 **Live Demo:** [https://your-project.vercel.app](https://smart-prep-ten.vercel.app/)
+🔗 **Backend API:** [https://your-backend.onrender.com](https://smartprep-o25n.onrender.com/)
+
+> Note: The backend is hosted on Render's free tier, which spins down after inactivity. The first request may take 30-60 seconds to wake up — please be patient!
+
 
 ## ✨ Features
 
