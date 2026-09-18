@@ -21,16 +21,34 @@ function TakeMockTest() {
     setAnswers({ ...answers, [questionId]: optionIndex });
   };
 
-  const handleSubmit = () => {
-    let correctCount = 0;
-    test.questions.forEach((q) => {
-      if (answers[q._id] === q.correctAnswerIndex) {
-        correctCount++;
-      }
-    });
-    setScore(correctCount);
-    setSubmitted(true);
-  };
+const handleSubmit = async () => {
+  let correctCount = 0;
+  test.questions.forEach((q) => {
+    if (answers[q._id] === q.correctAnswerIndex) {
+      correctCount++;
+    }
+  });
+  setScore(correctCount);
+  setSubmitted(true);
+
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      await api.post(
+        '/attempts',
+        {
+          testId: test._id,
+          testTitle: test.title,
+          score: correctCount,
+          totalQuestions: test.questions.length,
+        },
+        { headers: { Authorization: `Bearer ${token}` } }
+      );
+    } catch (err) {
+      console.error('Failed to record attempt:', err);
+    }
+  }
+};
 
   if (!test) return <p className="text-center mt-10">Loading test...</p>;
 

@@ -8,10 +8,12 @@ const authRoutes = require("./routes/authRoutes");
 const videoRoutes = require("./routes/videoRoutes");
 const mockTestRoutes = require("./routes/mockTestRoutes");
 const aiRoutes = require("./routes/aiRoutes");
+const attemptRoutes = require("./routes/attemptRoutes");
 const app = express();
 
 app.use(cors());
 app.use(express.json());
+app.use("/api/attempts", attemptRoutes);
 
 mongoose
   .connect(process.env.MONGO_URI)

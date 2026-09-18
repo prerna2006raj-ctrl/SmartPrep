@@ -11,6 +11,7 @@ import AnswerEvaluator from "./pages/AnswerEvaluator";
 import Bookmarks from "./pages/Bookmarks";
 import Videos from "./pages/Videos";
 import StudyPlanner from "./pages/StudyPlanner";
+import Dashboard from './pages/Dashboard';
 function App() {
   return (
     <BrowserRouter>
@@ -27,6 +28,7 @@ function App() {
         <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/videos" element={<Videos />} />
         <Route path="/study-planner" element={<StudyPlanner />} />
+        <Route path="/dashboard" element={<Dashboard />} />
       </Routes>
     </BrowserRouter>
   );
