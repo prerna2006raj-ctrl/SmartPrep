@@ -48,6 +48,9 @@ function Navbar() {
         <Link to="/videos" className="text-gray-700 hover:text-blue-700">
           Videos
         </Link>
+        <Link to="/study-planner" className="text-gray-700 hover:text-blue-700">
+          Study Planner
+        </Link>
         {user ? (
           <>
             <span className="text-gray-600 text-sm">Hi, {user.name}</span>

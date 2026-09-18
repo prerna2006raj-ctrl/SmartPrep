@@ -65,5 +65,42 @@ Provide your response in this exact format:
     res.status(500).json({ message: error.message });
   }
 };
+// Study Planner
+const generateStudyPlan = async (req, res) => {
+  try {
+    const { examName, examDate, hoursPerDay, weakSubjects } = req.body;
 
-module.exports = { solveDoubt, evaluateAnswer };
+    if (!examName || !examDate) {
+      return res.status(400).json({ message: 'Exam name and exam date are required' });
+    }
+
+    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+
+    const today = new Date().toDateString();
+
+    const prompt = `You are an expert exam preparation coach for Indian competitive exams. Create a personalized study plan.
+
+Today's date: ${today}
+Exam: ${examName}
+Exam date: ${examDate}
+Available study hours per day: ${hoursPerDay || 'not specified, assume 4 hours'}
+Weak subjects/topics to prioritize: ${weakSubjects || 'not specified, cover all standard topics evenly'}
+
+Create a week-by-week study plan (not day-by-day, to keep it practical) from today until the exam date. For each week, list:
+- Focus topics/subjects for that week
+- Suggested study activities (reading, practice questions, mock tests, revision)
+- A weekly goal or milestone
+
+If the timeline is very short (under 2 weeks) or very long (over 6 months), adjust the plan structure sensibly. End with a short motivational note and 2-3 general exam-day tips.`;
+
+    const result = await model.generateContent(prompt);
+    const plan = result.response.text();
+
+    res.status(200).json({ plan });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { solveDoubt, evaluateAnswer, generateStudyPlan };
+

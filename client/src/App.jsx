@@ -10,6 +10,7 @@ import DoubtSolver from "./pages/DoubtSolver";
 import AnswerEvaluator from "./pages/AnswerEvaluator";
 import Bookmarks from "./pages/Bookmarks";
 import Videos from "./pages/Videos";
+import StudyPlanner from "./pages/StudyPlanner";
 function App() {
   return (
     <BrowserRouter>
@@ -25,6 +26,7 @@ function App() {
         <Route path="/answer-evaluator" element={<AnswerEvaluator />} />
         <Route path="/bookmarks" element={<Bookmarks />} />
         <Route path="/videos" element={<Videos />} />
+        <Route path="/study-planner" element={<StudyPlanner />} />
       </Routes>
     </BrowserRouter>
   );
