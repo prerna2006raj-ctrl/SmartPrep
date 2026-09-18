@@ -22,8 +22,13 @@ const protect = async (req, res, next) => {
     res.status(401).json({ message: 'Not authorized, no token' });
   }
 };
-// Get logged-in user's profile
-const getProfile = async (req, res) => {
-  res.status(200).json(req.user);
+
+const adminOnly = (req, res, next) => {
+  if (req.user && req.user.isAdmin) {
+    next();
+  } else {
+    res.status(403).json({ message: 'Access denied. Admins only.' });
+  }
 };
-module.exports = { protect };
+
+module.exports = { protect, adminOnly };

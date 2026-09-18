@@ -56,6 +56,11 @@ function Navbar() {
             <Link to="/dashboard" className="text-gray-700 hover:text-blue-700">
               Dashboard
             </Link>
+            {user.isAdmin && (
+              <Link to="/admin" className="text-gray-700 hover:text-blue-700">
+                Admin
+              </Link>
+            )}
             <span className="text-gray-600 text-sm">Hi, {user.name}</span>
             <button
               onClick={handleLogout}
