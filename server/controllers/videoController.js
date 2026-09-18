@@ -21,5 +21,17 @@ const createVideo = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+// Delete a video
+const deleteVideo = async (req, res) => {
+  try {
+    const video = await VideoLink.findByIdAndDelete(req.params.id);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+    res.status(200).json({ message: 'Video deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-module.exports = { getVideos, createVideo };
+module.exports = { getVideos, createVideo, deleteVideo };

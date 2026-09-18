@@ -20,5 +20,18 @@ const createPaper = async (req, res) => {
     res.status(400).json({ message: error.message });
   }
 };
+// Delete a paper
+const deletePaper = async (req, res) => {
+  try {
+    const paper = await Paper.findByIdAndDelete(req.params.id);
+    if (!paper) {
+      return res.status(404).json({ message: 'Paper not found' });
+    }
+    res.status(200).json({ message: 'Paper deleted successfully' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 
-module.exports = { getPapers, createPaper };
+module.exports = { getPapers, createPaper, deletePaper };
+

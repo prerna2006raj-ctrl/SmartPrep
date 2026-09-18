@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import api from "../api/axios";
 
 function AdminPanel() {
   const [activeTab, setActiveTab] = useState("paper");
   const [message, setMessage] = useState("");
+  const [papers, setPapers] = useState([]);
 
   const [paperForm, setPaperForm] = useState({
     examName: "",
@@ -23,6 +24,21 @@ function AdminPanel() {
   });
 
   const token = localStorage.getItem("token");
+
+  const fetchPapers = async () => {
+    try {
+      const res = await api.get("/papers");
+      setPapers(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === "manage") {
+      fetchPapers();
+    }
+  }, [activeTab]);
 
   const handlePaperSubmit = async (e) => {
     e.preventDefault();
@@ -65,6 +81,20 @@ function AdminPanel() {
     }
   };
 
+  const handleDeletePaper = async (id) => {
+    if (!window.confirm("Are you sure you want to delete this paper?")) return;
+
+    try {
+      await api.delete(`/papers/${id}`, {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      setPapers((prev) => prev.filter((p) => p._id !== id));
+      setMessage("Paper deleted successfully!");
+    } catch (err) {
+      setMessage(err.response?.data?.message || "Failed to delete paper");
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-10">
       <div className="max-w-2xl mx-auto">
@@ -84,6 +114,12 @@ function AdminPanel() {
             className={`px-4 py-2 rounded ${activeTab === "video" ? "bg-blue-700 text-white" : "bg-gray-200 text-gray-700"}`}
           >
             Add Video
+          </button>
+          <button
+            onClick={() => setActiveTab("manage")}
+            className={`px-4 py-2 rounded ${activeTab === "manage" ? "bg-blue-700 text-white" : "bg-gray-200 text-gray-700"}`}
+          >
+            Manage Papers
           </button>
         </div>
 
@@ -226,6 +262,42 @@ function AdminPanel() {
               Add Video
             </button>
           </form>
+        )}
+
+        {activeTab === "manage" && (
+          <div className="bg-white shadow-md rounded-lg p-6">
+            <h2 className="text-lg font-semibold text-gray-800 mb-4">
+              All Papers
+            </h2>
+            <div className="space-y-2">
+              {papers.map((paper) => (
+                <div
+                  key={paper._id}
+                  className="flex justify-between items-center border-b border-gray-100 py-3"
+                >
+                  <div>
+                    <p className="font-medium text-gray-800">
+                      {paper.examName}
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      {paper.examCategory} • {paper.year}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => handleDeletePaper(paper._id)}
+                    className="bg-red-600 text-white text-sm px-3 py-1 rounded hover:bg-red-700"
+                  >
+                    Delete
+                  </button>
+                </div>
+              ))}
+              {papers.length === 0 && (
+                <p className="text-gray-500 text-center py-4">
+                  No papers found.
+                </p>
+              )}
+            </div>
+          </div>
         )}
       </div>
     </div>
