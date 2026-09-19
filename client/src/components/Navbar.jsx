@@ -51,6 +51,9 @@ function Navbar() {
         <Link to="/study-planner" className="text-gray-700 hover:text-blue-700">
           Study Planner
         </Link>
+        <Link to="/ai-quiz" className="text-gray-700 hover:text-blue-700">
+          AI Quiz
+        </Link>
         {user ? (
           <>
             <Link to="/dashboard" className="text-gray-700 hover:text-blue-700">

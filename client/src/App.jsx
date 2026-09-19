@@ -13,6 +13,7 @@ import Videos from "./pages/Videos";
 import StudyPlanner from "./pages/StudyPlanner";
 import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
+import AIQuizGenerator from "./pages/AIQuizGenerator";
 function App() {
   return (
     <BrowserRouter>
@@ -31,6 +32,7 @@ function App() {
         <Route path="/study-planner" element={<StudyPlanner />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/ai-quiz" element={<AIQuizGenerator />} />
       </Routes>
     </BrowserRouter>
   );

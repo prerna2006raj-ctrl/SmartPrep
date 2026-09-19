@@ -1,4 +1,4 @@
-const { GoogleGenerativeAI } = require('@google/generative-ai');
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
@@ -8,10 +8,10 @@ const solveDoubt = async (req, res) => {
     const { question } = req.body;
 
     if (!question) {
-      return res.status(400).json({ message: 'Question is required' });
+      return res.status(400).json({ message: "Question is required" });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
     const prompt = `You are a helpful tutor for Indian competitive exam students (UPSC, SSC, Banking, Railways, etc.). Explain the following doubt clearly and simply, using examples where helpful. Keep the explanation concise but complete.
 
@@ -31,17 +31,19 @@ const evaluateAnswer = async (req, res) => {
     const { question, studentAnswer, wordLimit } = req.body;
 
     if (!question || !studentAnswer) {
-      return res.status(400).json({ message: 'Question and answer are required' });
+      return res
+        .status(400)
+        .json({ message: "Question and answer are required" });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
     const prompt = `You are an expert UPSC Mains answer evaluator. Evaluate the student's answer below using this rubric:
 
 1. Structure (Introduction, Body, Conclusion) - Score out of 10
 2. Relevance to the question asked - Score out of 10
 3. Content depth (facts, examples, data) - Score out of 10
-4. Word limit adherence (limit: ${wordLimit || 'not specified'} words) - Score out of 10
+4. Word limit adherence (limit: ${wordLimit || "not specified"} words) - Score out of 10
 
 Question: ${question}
 
@@ -71,10 +73,12 @@ const generateStudyPlan = async (req, res) => {
     const { examName, examDate, hoursPerDay, weakSubjects } = req.body;
 
     if (!examName || !examDate) {
-      return res.status(400).json({ message: 'Exam name and exam date are required' });
+      return res
+        .status(400)
+        .json({ message: "Exam name and exam date are required" });
     }
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-3.6-flash' });
+    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
 
     const today = new Date().toDateString();
 
@@ -83,8 +87,8 @@ const generateStudyPlan = async (req, res) => {
 Today's date: ${today}
 Exam: ${examName}
 Exam date: ${examDate}
-Available study hours per day: ${hoursPerDay || 'not specified, assume 4 hours'}
-Weak subjects/topics to prioritize: ${weakSubjects || 'not specified, cover all standard topics evenly'}
+Available study hours per day: ${hoursPerDay || "not specified, assume 4 hours"}
+Weak subjects/topics to prioritize: ${weakSubjects || "not specified, cover all standard topics evenly"}
 
 Create a week-by-week study plan (not day-by-day, to keep it practical) from today until the exam date. For each week, list:
 - Focus topics/subjects for that week
@@ -101,6 +105,64 @@ If the timeline is very short (under 2 weeks) or very long (over 6 months), adju
     res.status(500).json({ message: error.message });
   }
 };
+const { PDFParse } = require("pdf-parse");
 
-module.exports = { solveDoubt, evaluateAnswer, generateStudyPlan };
+// Generate quiz from uploaded PDF
+const generateQuizFromPDF = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No PDF file uploaded" });
+    }
 
+    const parser = new PDFParse({ data: req.file.buffer });
+    const pdfData = await parser.getText();
+    const extractedText = pdfData.text.slice(0, 8000);
+    await parser.destroy(); // limit length to keep prompt manageable
+
+    if (!extractedText || extractedText.trim().length < 50) {
+      return res
+        .status(400)
+        .json({ message: "Could not extract readable text from this PDF" });
+    }
+
+    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+
+    const prompt = `You are creating a multiple-choice quiz based on the following study material. Generate exactly 5 questions based on the key facts and concepts in this text.
+
+Text:
+${extractedText}
+
+Respond ONLY with valid JSON in this exact format, no extra text, no markdown formatting:
+[
+  {
+    "questionText": "...",
+    "options": ["...", "...", "...", "..."],
+    "correctAnswerIndex": 0
+  }
+]`;
+
+    const result = await model.generateContent(prompt);
+    let responseText = result.response.text();
+
+    // Clean up in case Gemini wraps the JSON in markdown code fences
+    responseText = responseText
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+
+    const questions = JSON.parse(responseText);
+
+    res.status(200).json({ questions });
+  } catch (error) {
+    res
+      .status(500)
+      .json({ message: "Failed to generate quiz: " + error.message });
+  }
+};
+
+module.exports = {
+  solveDoubt,
+  evaluateAnswer,
+  generateStudyPlan,
+  generateQuizFromPDF,
+};
