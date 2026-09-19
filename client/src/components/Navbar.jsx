@@ -54,6 +54,12 @@ function Navbar() {
         <Link to="/ai-quiz" className="text-gray-700 hover:text-blue-700">
           AI Quiz
         </Link>
+        <Link
+          to="/ai-quiz-history"
+          className="text-gray-700 hover:text-blue-700"
+        >
+          Quiz History
+        </Link>
         {user ? (
           <>
             <Link to="/dashboard" className="text-gray-700 hover:text-blue-700">

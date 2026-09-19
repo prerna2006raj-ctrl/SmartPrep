@@ -9,12 +9,13 @@ const videoRoutes = require("./routes/videoRoutes");
 const mockTestRoutes = require("./routes/mockTestRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const attemptRoutes = require("./routes/attemptRoutes");
+const aiQuizHistoryRoutes = require("./routes/aiQuizHistoryRoutes");
 const app = express();
 
 app.use(cors());
 app.use(express.json());
 app.use("/api/attempts", attemptRoutes);
-
+app.use("/api/quiz-history", aiQuizHistoryRoutes);
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => console.log("Connected to MongoDB"))

@@ -14,6 +14,7 @@ import StudyPlanner from "./pages/StudyPlanner";
 import Dashboard from "./pages/Dashboard";
 import AdminPanel from "./pages/AdminPanel";
 import AIQuizGenerator from "./pages/AIQuizGenerator";
+import AIQuizHistory from "./pages/AIQuizHistory";
 function App() {
   return (
     <BrowserRouter>
@@ -33,6 +34,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/ai-quiz" element={<AIQuizGenerator />} />
+        <Route path="/ai-quiz-history" element={<AIQuizHistory />} />
       </Routes>
     </BrowserRouter>
   );

@@ -65,8 +65,7 @@ function AIQuizGenerator() {
       behavior: "smooth",
     });
   };
-
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     let calculatedScore = 0;
 
     questions.forEach((question, index) => {
@@ -76,6 +75,15 @@ function AIQuizGenerator() {
     });
 
     setScore(calculatedScore);
+    try {
+      await api.post("/quiz-history", {
+        fileName: file?.name || "Unknown PDF",
+        score: calculatedScore,
+        totalQuestions: questions.length,
+      });
+    } catch (error) {
+      console.error("Failed to save quiz history:", error);
+    }
   };
 
   return (
