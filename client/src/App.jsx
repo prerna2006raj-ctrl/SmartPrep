@@ -19,6 +19,7 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import AIQuizGenerator from "./pages/AIQuizGenerator";
 import AIQuizHistory from "./pages/AIQuizHistory";
+import PerformanceAnalytics from "./pages/PerformanceAnalytics";
 function App() {
   return (
     <BrowserRouter>
@@ -30,6 +31,8 @@ function App() {
         <Routes>
           {/* Home */}
           <Route path="/" element={<Home />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+
 
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
@@ -57,7 +60,10 @@ function App() {
           <Route path="/study-planner" element={<StudyPlanner />} />
 
           {/* Dashboard / Analytics */}
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route
+            path="/performance-analytics"
+            element={<PerformanceAnalytics />}
+          />
           <Route path="/profile" element={<Profile />} />
 
           <Route path="/settings" element={<Settings />} />

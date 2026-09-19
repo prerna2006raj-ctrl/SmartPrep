@@ -106,7 +106,7 @@ function Navbar() {
   const secondaryLinks = [
     {
       name: "Performance Analytics",
-      path: "/dashboard",
+      path: "/performance-analytics",
       icon: "▥",
     },
     {
