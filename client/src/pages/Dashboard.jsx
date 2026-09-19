@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import api from "../api/axios";
+import StudyStreak from "../components/StudyStreak";
 import {
   LineChart,
   Line,
@@ -51,51 +52,7 @@ function Dashboard() {
           ) / attempts.length,
         )
       : 0;
-  // Get date in YYYY-MM-DD format
-  const getDateKey = (date) => {
-    const d = new Date(date);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(
-      d.getDate(),
-    ).padStart(2, "0")}`;
-  };
 
-  // Dates on which the user attempted a test
-  const activeDates = new Set(attempts.map((a) => getDateKey(a.attemptedAt)));
-
-  // Calculate current streak
-  let currentStreak = 0;
-  const today = new Date();
-
-  for (let i = 0; ; i++) {
-    const date = new Date(today);
-    date.setDate(today.getDate() - i);
-
-    if (activeDates.has(getDateKey(date))) {
-      currentStreak++;
-    } else {
-      break;
-    }
-  }
-
-  // Current week's days
-  const weekDays = [];
-  const currentDay = today.getDay(); // Sunday = 0
-
-  const monday = new Date(today);
-  monday.setDate(today.getDate() - (currentDay === 0 ? 6 : currentDay - 1));
-
-  for (let i = 0; i < 7; i++) {
-    const date = new Date(monday);
-    date.setDate(monday.getDate() + i);
-
-    weekDays.push({
-      date,
-      name: date.toLocaleDateString("en-US", {
-        weekday: "short",
-      }),
-      active: activeDates.has(getDateKey(date)),
-    });
-  }
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-10">
       <h1 className="text-3xl font-bold text-blue-700 mb-8 text-center">
@@ -109,43 +66,7 @@ function Dashboard() {
         </p>
       ) : (
         <div className="max-w-4xl mx-auto">
-          {/* Study Streak */}
-          <div className="bg-white shadow-md rounded-lg p-5 mb-8">
-            <div className="flex items-center justify-between mb-5">
-              <div>
-                <h2 className="text-xl font-bold text-gray-800">
-                  🔥 {currentStreak} Day Streak
-                </h2>
-                <p className="text-sm text-gray-500 mt-1">
-                  Keep studying to maintain your streak!
-                </p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-7 gap-2">
-              {weekDays.map((day) => {
-                const isFuture = day.date > today;
-
-                return (
-                  <div key={day.name} className="text-center">
-                    <p className="text-xs text-gray-500 mb-2">{day.name}</p>
-
-                    <div
-                      className={`w-9 h-9 mx-auto rounded-full flex items-center justify-center text-sm font-semibold ${
-                        day.active
-                          ? "bg-green-100 text-green-600"
-                          : isFuture
-                            ? "bg-gray-100 text-gray-300"
-                            : "bg-gray-100 text-gray-500"
-                      }`}
-                    >
-                      {day.active ? "✓" : "○"}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
+          <StudyStreak attempts={attempts} />
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
             <div className="bg-white shadow-md rounded-lg p-5 text-center">
               <p className="text-gray-500 text-sm">Tests Taken</p>
