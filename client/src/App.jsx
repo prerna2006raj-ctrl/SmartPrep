@@ -3,6 +3,8 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import Navbar from "./components/Navbar";
 
 import Home from "./pages/Home";
+import Exams from "./pages/Exams";
+import ExamCategory from "./pages/ExamCategory";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Papers from "./pages/Papers";
@@ -19,7 +21,10 @@ import Profile from "./pages/Profile";
 import Settings from "./pages/Settings";
 import AIQuizGenerator from "./pages/AIQuizGenerator";
 import AIQuizHistory from "./pages/AIQuizHistory";
+import ExamPreparation from "./pages/ExamPreparation";
+import ExamPapers from "./pages/ExamPapers";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
+
 function App() {
   return (
     <BrowserRouter>
@@ -29,46 +34,109 @@ function App() {
       {/* Main Application Area */}
       <main className="min-h-screen bg-slate-50 pt-[72px] lg:ml-[250px]">
         <Routes>
+
           {/* Home */}
           <Route path="/" element={<Home />} />
+
+          {/* Dashboard */}
           <Route path="/dashboard" element={<Dashboard />} />
 
+          {/* Exam Structure */}
+          <Route path="/exams" element={<Exams />} />
+
+          <Route
+            path="/exams/:category"
+            element={<ExamCategory />}
+          />
+
+          <Route
+            path="/exams/:category/:exam"
+            element={<ExamPreparation />}
+          />
+
+          {/* Exam-specific Previous Year Papers */}
+          <Route
+            path="/exams/:category/:exam/papers"
+            element={<ExamPapers />}
+          />
+
+          {/* Exam-specific Mock Tests */}
+          <Route
+            path="/exams/:category/:exam/mock-tests"
+            element={<MockTests />}
+          />
 
           {/* Authentication */}
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<Signup />} />
 
-          {/* Resources */}
+          {/* General Resources */}
           <Route path="/papers" element={<Papers />} />
           <Route path="/videos" element={<Videos />} />
 
           {/* Mock Tests */}
           <Route path="/mock-tests" element={<MockTests />} />
-          <Route path="/mock-tests/:id" element={<TakeMockTest />} />
+
+          <Route
+            path="/mock-tests/:id"
+            element={<TakeMockTest />}
+          />
 
           {/* AI Features */}
-          <Route path="/doubt-solver" element={<DoubtSolver />} />
+          <Route
+            path="/doubt-solver"
+            element={<DoubtSolver />}
+          />
 
-          <Route path="/answer-evaluator" element={<AnswerEvaluator />} />
-          <Route path="/ai-quiz" element={<AIQuizGenerator />} />
+          <Route
+            path="/answer-evaluator"
+            element={<AnswerEvaluator />}
+          />
 
-          <Route path="/quiz-history" element={<AIQuizHistory />} />
+          <Route
+            path="/ai-quiz"
+            element={<AIQuizGenerator />}
+          />
+
+          <Route
+            path="/quiz-history"
+            element={<AIQuizHistory />}
+          />
 
           {/* User Features */}
-          <Route path="/bookmarks" element={<Bookmarks />} />
+          <Route
+            path="/bookmarks"
+            element={<Bookmarks />}
+          />
 
-          <Route path="/study-planner" element={<StudyPlanner />} />
+          <Route
+            path="/study-planner"
+            element={<StudyPlanner />}
+          />
 
-          {/* Dashboard / Analytics */}
+          {/* Analytics */}
           <Route
             path="/performance-analytics"
             element={<PerformanceAnalytics />}
           />
-          <Route path="/profile" element={<Profile />} />
 
-          <Route path="/settings" element={<Settings />} />
+          {/* Profile & Settings */}
+          <Route
+            path="/profile"
+            element={<Profile />}
+          />
+
+          <Route
+            path="/settings"
+            element={<Settings />}
+          />
+
           {/* Admin */}
-          <Route path="/admin" element={<AdminPanel />} />
+          <Route
+            path="/admin"
+            element={<AdminPanel />}
+          />
+
         </Routes>
       </main>
     </BrowserRouter>

@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import api from '../api/axios';
+import { useState, useEffect } from "react";
+import { useParams, Link } from "react-router-dom";
+import api from "../api/axios";
 
 function TakeMockTest() {
   const { id } = useParams();
@@ -9,9 +9,10 @@ function TakeMockTest() {
   const [answers, setAnswers] = useState({});
   const [submitted, setSubmitted] = useState(false);
   const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(null);
   const [timeUp, setTimeUp] = useState(false);
   const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   // ==============================
   // Fetch Test
@@ -19,14 +20,16 @@ function TakeMockTest() {
   useEffect(() => {
     const fetchTest = async () => {
       try {
-        const res = await api.get(`/mocktests/${id}`);
+        const res = await api.get(`/mock-tests/${id}`);
 
         setTest(res.data);
 
-        // Convert minutes into seconds
+        // Start timer using test duration
         setTimeLeft(res.data.durationMinutes * 60);
       } catch (err) {
-        console.error('Failed to load test:', err);
+        console.error("Failed to load test:", err);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -37,12 +40,24 @@ function TakeMockTest() {
   // Countdown Timer
   // ==============================
   useEffect(() => {
-    if (!test || submitted || timeLeft <= 0) {
+    // Do not start timer until test and time are loaded
+    if (!test || timeLeft === null || submitted) {
+      return;
+    }
+
+    // Stop timer when it reaches zero
+    if (timeLeft <= 0) {
       return;
     }
 
     const timer = setInterval(() => {
-      setTimeLeft((prevTime) => prevTime - 1);
+      setTimeLeft((prevTime) => {
+        if (prevTime === null) {
+          return null;
+        }
+
+        return prevTime - 1;
+      });
     }, 1000);
 
     return () => clearInterval(timer);
@@ -52,7 +67,11 @@ function TakeMockTest() {
   // Auto Submit When Time Ends
   // ==============================
   useEffect(() => {
-    if (test && timeLeft === 0 && !submitted) {
+    if (
+      test &&
+      timeLeft === 0 &&
+      !submitted
+    ) {
       setTimeUp(true);
       handleSubmit();
     }
@@ -64,10 +83,10 @@ function TakeMockTest() {
   const handleSelect = (questionId, optionIndex) => {
     if (submitted) return;
 
-    setAnswers({
-      ...answers,
+    setAnswers((previousAnswers) => ({
+      ...previousAnswers,
       [questionId]: optionIndex,
-    });
+    }));
   };
 
   // ==============================
@@ -87,12 +106,12 @@ function TakeMockTest() {
     setScore(correctCount);
     setSubmitted(true);
 
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem("token");
 
     if (token) {
       try {
         await api.post(
-          '/attempts',
+          "/attempts",
           {
             testId: test._id,
             testTitle: test.title,
@@ -106,7 +125,7 @@ function TakeMockTest() {
           }
         );
       } catch (err) {
-        console.error('Failed to record attempt:', err);
+        console.error("Failed to record attempt:", err);
       }
     }
   };
@@ -114,19 +133,27 @@ function TakeMockTest() {
   // ==============================
   // Format Timer
   // ==============================
-  const minutes = Math.floor(timeLeft / 60);
-  const seconds = timeLeft % 60;
+  const minutes =
+    timeLeft !== null
+      ? Math.floor(timeLeft / 60)
+      : 0;
 
-  const formattedTime = `${String(minutes).padStart(2, '0')}:${String(
-    seconds
-  ).padStart(2, '0')}`;
+  const seconds =
+    timeLeft !== null
+      ? timeLeft % 60
+      : 0;
+
+  const formattedTime = `${String(minutes).padStart(
+    2,
+    "0"
+  )}:${String(seconds).padStart(2, "0")}`;
 
   // ==============================
   // Loading
   // ==============================
-  if (!test) {
+  if (loading || !test) {
     return (
-      <p className="text-center mt-10">
+      <p className="mt-10 text-center">
         Loading test...
       </p>
     );
@@ -139,9 +166,11 @@ function TakeMockTest() {
 
   const answeredCount = Object.keys(answers).length;
 
-  const unansweredCount = totalQuestions - answeredCount;
+  const unansweredCount =
+    totalQuestions - answeredCount;
 
-  const incorrectCount = answeredCount - score;
+  const incorrectCount =
+    answeredCount - score;
 
   const percentage =
     totalQuestions > 0
@@ -152,22 +181,22 @@ function TakeMockTest() {
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-10">
-
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto max-w-6xl">
 
         {/* ================================= */}
         {/* HEADER */}
         {/* ================================= */}
 
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+        <div className="mb-6 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
 
           <div>
             <h1 className="text-2xl font-bold text-blue-700">
               {test.title}
             </h1>
 
-            <p className="text-gray-500 mt-1">
-              {test.durationMinutes} minutes • {totalQuestions} questions
+            <p className="mt-1 text-gray-500">
+              {test.durationMinutes} minutes •{" "}
+              {totalQuestions} questions
             </p>
           </div>
 
@@ -175,27 +204,29 @@ function TakeMockTest() {
 
           {!submitted && (
             <div
-              className={`px-5 py-3 rounded-lg font-bold text-xl shadow-sm ${
+              className={`rounded-lg border px-5 py-3 text-xl font-bold shadow-sm ${
                 timeLeft <= 60
-                  ? 'bg-red-100 text-red-700 border border-red-300'
-                  : 'bg-blue-100 text-blue-700 border border-blue-300'
+                  ? "border-red-300 bg-red-100 text-red-700"
+                  : "border-blue-300 bg-blue-100 text-blue-700"
               }`}
             >
               ⏱ {formattedTime}
             </div>
           )}
-
         </div>
 
         {/* ================================= */}
         {/* TIME WARNING */}
         {/* ================================= */}
 
-        {!submitted && timeLeft <= 60 && timeLeft > 0 && (
-          <div className="bg-red-100 border border-red-300 text-red-700 px-4 py-3 rounded-lg mb-6">
-            ⚠️ Less than one minute remaining!
-          </div>
-        )}
+        {!submitted &&
+          timeLeft !== null &&
+          timeLeft <= 60 &&
+          timeLeft > 0 && (
+            <div className="mb-6 rounded-lg border border-red-300 bg-red-100 px-4 py-3 text-red-700">
+              ⚠️ Less than one minute remaining!
+            </div>
+          )}
 
         {/* ================================= */}
         {/* RESULT SUMMARY */}
@@ -205,18 +236,19 @@ function TakeMockTest() {
           <div className="mb-6">
 
             {timeUp ? (
-              <div className="bg-red-100 border border-red-400 text-red-800 px-5 py-4 rounded-lg mb-5">
-                <p className="font-bold text-xl">
+              <div className="mb-5 rounded-lg border border-red-400 bg-red-100 px-5 py-4 text-red-800">
+                <p className="text-xl font-bold">
                   ⏰ Time's Up!
                 </p>
 
                 <p className="mt-1">
-                  Your test was automatically submitted because the time limit ended.
+                  Your test was automatically submitted
+                  because the time limit ended.
                 </p>
               </div>
             ) : (
-              <div className="bg-green-100 border border-green-400 text-green-800 px-5 py-4 rounded-lg mb-5">
-                <p className="font-bold text-xl">
+              <div className="mb-5 rounded-lg border border-green-400 bg-green-100 px-5 py-4 text-green-800">
+                <p className="text-xl font-bold">
                   ✅ Test Submitted Successfully!
                 </p>
               </div>
@@ -224,10 +256,10 @@ function TakeMockTest() {
 
             {/* Result Cards */}
 
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+            <div className="grid grid-cols-2 gap-4 md:grid-cols-5">
 
-              <div className="bg-white shadow-sm rounded-lg p-4 text-center">
-                <p className="text-gray-500 text-sm">
+              <div className="rounded-lg bg-white p-4 text-center shadow-sm">
+                <p className="text-sm text-gray-500">
                   Score
                 </p>
 
@@ -236,8 +268,8 @@ function TakeMockTest() {
                 </p>
               </div>
 
-              <div className="bg-white shadow-sm rounded-lg p-4 text-center">
-                <p className="text-gray-500 text-sm">
+              <div className="rounded-lg bg-white p-4 text-center shadow-sm">
+                <p className="text-sm text-gray-500">
                   Percentage
                 </p>
 
@@ -246,8 +278,8 @@ function TakeMockTest() {
                 </p>
               </div>
 
-              <div className="bg-white shadow-sm rounded-lg p-4 text-center">
-                <p className="text-gray-500 text-sm">
+              <div className="rounded-lg bg-white p-4 text-center shadow-sm">
+                <p className="text-sm text-gray-500">
                   Correct
                 </p>
 
@@ -256,8 +288,8 @@ function TakeMockTest() {
                 </p>
               </div>
 
-              <div className="bg-white shadow-sm rounded-lg p-4 text-center">
-                <p className="text-gray-500 text-sm">
+              <div className="rounded-lg bg-white p-4 text-center shadow-sm">
+                <p className="text-sm text-gray-500">
                   Incorrect
                 </p>
 
@@ -266,8 +298,8 @@ function TakeMockTest() {
                 </p>
               </div>
 
-              <div className="bg-white shadow-sm rounded-lg p-4 text-center">
-                <p className="text-gray-500 text-sm">
+              <div className="rounded-lg bg-white p-4 text-center shadow-sm">
+                <p className="text-sm text-gray-500">
                   Unanswered
                 </p>
 
@@ -277,7 +309,6 @@ function TakeMockTest() {
               </div>
 
             </div>
-
           </div>
         )}
 
@@ -285,7 +316,7 @@ function TakeMockTest() {
         {/* MAIN TEST AREA */}
         {/* ================================= */}
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
 
           {/* ================================= */}
           {/* QUESTION NAVIGATION */}
@@ -293,9 +324,9 @@ function TakeMockTest() {
 
           <div className="md:col-span-1">
 
-            <div className="bg-white shadow-md rounded-lg p-5 sticky top-5">
+            <div className="sticky top-5 rounded-lg bg-white p-5 shadow-md">
 
-              <h2 className="font-bold text-gray-800 mb-4">
+              <h2 className="mb-4 font-bold text-gray-800">
                 Questions
               </h2>
 
@@ -310,29 +341,30 @@ function TakeMockTest() {
                     currentQuestion === index;
 
                   let buttonStyle =
-                    'bg-gray-100 text-gray-700';
+                    "bg-gray-100 text-gray-700";
 
                   if (isCurrent) {
                     buttonStyle =
-                      'bg-blue-700 text-white ring-2 ring-blue-300';
+                      "bg-blue-700 text-white ring-2 ring-blue-300";
                   } else if (isAnswered) {
                     buttonStyle =
-                      'bg-green-100 text-green-700 border border-green-300';
+                      "border border-green-300 bg-green-100 text-green-700";
                   }
 
                   if (submitted) {
+
                     if (
                       answers[q._id] ===
                       q.correctAnswerIndex
                     ) {
                       buttonStyle =
-                        'bg-green-500 text-white';
+                        "bg-green-500 text-white";
                     } else if (isAnswered) {
                       buttonStyle =
-                        'bg-red-500 text-white';
+                        "bg-red-500 text-white";
                     } else {
                       buttonStyle =
-                        'bg-gray-200 text-gray-500';
+                        "bg-gray-200 text-gray-500";
                     }
                   }
 
@@ -342,7 +374,7 @@ function TakeMockTest() {
                       onClick={() =>
                         setCurrentQuestion(index)
                       }
-                      className={`w-10 h-10 rounded-lg font-semibold text-sm ${buttonStyle}`}
+                      className={`h-10 w-10 rounded-lg text-sm font-semibold ${buttonStyle}`}
                     >
                       {index + 1}
                     </button>
@@ -357,17 +389,17 @@ function TakeMockTest() {
                 <div className="mt-5 space-y-2 text-sm">
 
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded bg-green-100 border border-green-300"></span>
+                    <span className="h-4 w-4 rounded border border-green-300 bg-green-100"></span>
                     Answered
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded bg-gray-100"></span>
+                    <span className="h-4 w-4 rounded bg-gray-100"></span>
                     Not Answered
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <span className="w-4 h-4 rounded bg-blue-700"></span>
+                    <span className="h-4 w-4 rounded bg-blue-700"></span>
                     Current
                   </div>
 
@@ -376,7 +408,7 @@ function TakeMockTest() {
 
               {/* Progress */}
 
-              <div className="mt-5 pt-4 border-t">
+              <div className="mt-5 border-t pt-4">
 
                 <p className="text-sm text-gray-500">
                   Progress
@@ -389,7 +421,6 @@ function TakeMockTest() {
               </div>
 
             </div>
-
           </div>
 
           {/* ================================= */}
@@ -398,13 +429,14 @@ function TakeMockTest() {
 
           <div className="md:col-span-3">
 
-            <div className="bg-white shadow-md rounded-lg p-6">
+            <div className="rounded-lg bg-white p-6 shadow-md">
 
-              <p className="text-sm text-gray-500 mb-2">
-                Question {currentQuestion + 1} of {totalQuestions}
+              <p className="mb-2 text-sm text-gray-500">
+                Question {currentQuestion + 1} of{" "}
+                {totalQuestions}
               </p>
 
-              <p className="font-semibold text-gray-800 text-lg mb-5">
+              <p className="mb-5 text-lg font-semibold text-gray-800">
                 {currentQ.questionText}
               </p>
 
@@ -412,80 +444,85 @@ function TakeMockTest() {
 
               <div className="space-y-3">
 
-                {currentQ.options.map((option, optIndex) => {
+                {currentQ.options.map(
+                  (option, optIndex) => {
 
-                  const isSelected =
-                    answers[currentQ._id] === optIndex;
+                    const isSelected =
+                      answers[currentQ._id] ===
+                      optIndex;
 
-                  const isCorrect =
-                    optIndex === currentQ.correctAnswerIndex;
+                    const isCorrect =
+                      optIndex ===
+                      currentQ.correctAnswerIndex;
 
-                  let optionStyle =
-                    'border-gray-300 hover:border-blue-400';
+                    let optionStyle =
+                      "border-gray-300 hover:border-blue-400";
 
-                  if (submitted && isCorrect) {
-                    optionStyle =
-                      'border-green-500 bg-green-50';
-                  } else if (
-                    submitted &&
-                    isSelected &&
-                    !isCorrect
-                  ) {
-                    optionStyle =
-                      'border-red-500 bg-red-50';
-                  } else if (isSelected) {
-                    optionStyle =
-                      'border-blue-500 bg-blue-50';
+                    if (submitted && isCorrect) {
+                      optionStyle =
+                        "border-green-500 bg-green-50";
+                    } else if (
+                      submitted &&
+                      isSelected &&
+                      !isCorrect
+                    ) {
+                      optionStyle =
+                        "border-red-500 bg-red-50";
+                    } else if (isSelected) {
+                      optionStyle =
+                        "border-blue-500 bg-blue-50";
+                    }
+
+                    return (
+                      <label
+                        key={optIndex}
+                        className={`block cursor-pointer rounded-lg border px-4 py-3 transition ${optionStyle}`}
+                      >
+                        <input
+                          type="radio"
+                          name={currentQ._id}
+                          className="mr-3"
+                          disabled={submitted}
+                          checked={isSelected}
+                          onChange={() =>
+                            handleSelect(
+                              currentQ._id,
+                              optIndex
+                            )
+                          }
+                        />
+
+                        {option}
+                      </label>
+                    );
                   }
-
-                  return (
-                    <label
-                      key={optIndex}
-                      className={`block border rounded-lg px-4 py-3 cursor-pointer transition ${optionStyle}`}
-                    >
-
-                      <input
-                        type="radio"
-                        name={currentQ._id}
-                        className="mr-3"
-                        disabled={submitted}
-                        checked={isSelected}
-                        onChange={() =>
-                          handleSelect(
-                            currentQ._id,
-                            optIndex
-                          )
-                        }
-                      />
-
-                      {option}
-
-                    </label>
-                  );
-
-                })}
+                )}
 
               </div>
 
               {/* ================================= */}
-              {/* QUESTION NAVIGATION BUTTONS */}
+              {/* QUESTION NAVIGATION */}
               {/* ================================= */}
 
-              <div className="flex justify-between mt-8 gap-4">
+              <div className="mt-8 flex justify-between gap-4">
 
                 <button
                   onClick={() =>
                     setCurrentQuestion(
-                      Math.max(0, currentQuestion - 1)
+                      Math.max(
+                        0,
+                        currentQuestion - 1
+                      )
                     )
                   }
                   disabled={currentQuestion === 0}
-                  className="px-5 py-2 rounded bg-gray-200 text-gray-700 disabled:opacity-40"
+                  className="rounded bg-gray-200 px-5 py-2 text-gray-700 disabled:opacity-40"
                 >
                   ← Previous
                 </button>
 
-                {currentQuestion < totalQuestions - 1 ? (
+                {currentQuestion <
+                totalQuestions - 1 ? (
                   <button
                     onClick={() =>
                       setCurrentQuestion(
@@ -495,14 +532,14 @@ function TakeMockTest() {
                         )
                       )
                     }
-                    className="px-5 py-2 rounded bg-blue-700 text-white hover:bg-blue-800"
+                    className="rounded bg-blue-700 px-5 py-2 text-white hover:bg-blue-800"
                   >
                     Next →
                   </button>
                 ) : !submitted ? (
                   <button
                     onClick={handleSubmit}
-                    className="px-5 py-2 rounded bg-green-600 text-white hover:bg-green-700 font-semibold"
+                    className="rounded bg-green-600 px-5 py-2 font-semibold text-white hover:bg-green-700"
                   >
                     Submit Test
                   </button>
@@ -511,9 +548,7 @@ function TakeMockTest() {
               </div>
 
             </div>
-
           </div>
-
         </div>
 
         {/* ================================= */}
@@ -523,14 +558,13 @@ function TakeMockTest() {
         {submitted && (
           <Link
             to="/mock-tests"
-            className="block text-center bg-gray-700 text-white py-3 rounded-lg hover:bg-gray-800 transition font-semibold mt-6"
+            className="mt-6 block rounded-lg bg-gray-700 py-3 text-center font-semibold text-white transition hover:bg-gray-800"
           >
             Back to Mock Tests
           </Link>
         )}
 
       </div>
-
     </div>
   );
 }

@@ -1,17 +1,25 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const Question = require("../models/Question");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
+// =====================================================
 // Doubt Solver
+// =====================================================
+
 const solveDoubt = async (req, res) => {
   try {
     const { question } = req.body;
 
     if (!question) {
-      return res.status(400).json({ message: "Question is required" });
+      return res.status(400).json({
+        message: "Question is required",
+      });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+    });
 
     const prompt = `You are a helpful tutor for Indian competitive exam students (UPSC, SSC, Banking, Railways, etc.). Explain the following doubt clearly and simply, using examples where helpful. Keep the explanation concise but complete.
 
@@ -22,21 +30,30 @@ Question: ${question}`;
 
     res.status(200).json({ answer });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error.message,
+    });
   }
 };
+
+
+// =====================================================
 // Answer Evaluation
+// =====================================================
+
 const evaluateAnswer = async (req, res) => {
   try {
     const { question, studentAnswer, wordLimit } = req.body;
 
     if (!question || !studentAnswer) {
-      return res
-        .status(400)
-        .json({ message: "Question and answer are required" });
+      return res.status(400).json({
+        message: "Question and answer are required",
+      });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+    });
 
     const prompt = `You are an expert UPSC Mains answer evaluator. Evaluate the student's answer below using this rubric:
 
@@ -64,21 +81,35 @@ Provide your response in this exact format:
 
     res.status(200).json({ evaluation });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error.message,
+    });
   }
 };
+
+
+// =====================================================
 // Study Planner
+// =====================================================
+
 const generateStudyPlan = async (req, res) => {
   try {
-    const { examName, examDate, hoursPerDay, weakSubjects } = req.body;
+    const {
+      examName,
+      examDate,
+      hoursPerDay,
+      weakSubjects,
+    } = req.body;
 
     if (!examName || !examDate) {
-      return res
-        .status(400)
-        .json({ message: "Exam name and exam date are required" });
+      return res.status(400).json({
+        message: "Exam name and exam date are required",
+      });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+    });
 
     const today = new Date().toDateString();
 
@@ -102,30 +133,46 @@ If the timeline is very short (under 2 weeks) or very long (over 6 months), adju
 
     res.status(200).json({ plan });
   } catch (error) {
-    res.status(500).json({ message: error.message });
+    res.status(500).json({
+      message: error.message,
+    });
   }
 };
+
+
+// =====================================================
+// Generate Quiz From PDF
+// =====================================================
+
 const { PDFParse } = require("pdf-parse");
 
-// Generate quiz from uploaded PDF
 const generateQuizFromPDF = async (req, res) => {
   try {
     if (!req.file) {
-      return res.status(400).json({ message: "No PDF file uploaded" });
+      return res.status(400).json({
+        message: "No PDF file uploaded",
+      });
     }
 
-    const parser = new PDFParse({ data: req.file.buffer });
+    const parser = new PDFParse({
+      data: req.file.buffer,
+    });
+
     const pdfData = await parser.getText();
+
     const extractedText = pdfData.text.slice(0, 8000);
-    await parser.destroy(); // limit length to keep prompt manageable
+
+    await parser.destroy();
 
     if (!extractedText || extractedText.trim().length < 50) {
-      return res
-        .status(400)
-        .json({ message: "Could not extract readable text from this PDF" });
+      return res.status(400).json({
+        message: "Could not extract readable text from this PDF",
+      });
     }
 
-    const model = genAI.getGenerativeModel({ model: "gemini-3.6-flash" });
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+    });
 
     const prompt = `You are creating a multiple-choice quiz based on the following study material. Generate exactly 5 questions based on the key facts and concepts in this text.
 
@@ -142,9 +189,9 @@ Respond ONLY with valid JSON in this exact format, no extra text, no markdown fo
 ]`;
 
     const result = await model.generateContent(prompt);
+
     let responseText = result.response.text();
 
-    // Clean up in case Gemini wraps the JSON in markdown code fences
     responseText = responseText
       .replace(/```json\n?/g, "")
       .replace(/```\n?/g, "")
@@ -152,17 +199,153 @@ Respond ONLY with valid JSON in this exact format, no extra text, no markdown fo
 
     const questions = JSON.parse(responseText);
 
-    res.status(200).json({ questions });
+    res.status(200).json({
+      questions,
+    });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Failed to generate quiz: " + error.message });
+    res.status(500).json({
+      message: "Failed to generate quiz: " + error.message,
+    });
   }
 };
+
+
+// =====================================================
+// Generate Question Bank
+// =====================================================
+
+const generateQuestionBank = async (req, res) => {
+  try {
+    const {
+      exam,
+      subject,
+      numberOfQuestions,
+      difficulty,
+    } = req.body;
+
+    // Validate input
+    if (!exam || !subject || !numberOfQuestions) {
+      return res.status(400).json({
+        message:
+          "Exam, subject and number of questions are required",
+      });
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: "gemini-3.6-flash",
+    });
+
+    const prompt = `You are an expert question setter for Indian competitive exams.
+
+Generate exactly ${numberOfQuestions} multiple-choice questions for:
+
+Exam: ${exam}
+Subject: ${subject}
+Difficulty: ${difficulty || "Medium"}
+
+Requirements:
+- Questions must be relevant to the specified exam and subject.
+- Each question must have exactly 4 options.
+- Only one option should be correct.
+- correctAnswerIndex must be 0, 1, 2, or 3.
+- Do not repeat questions.
+- Questions should be useful for competitive exam preparation.
+- Include a short explanation for every answer.
+- Make sure the correctAnswerIndex matches the correct option.
+
+Respond ONLY with valid JSON.
+Do not use markdown.
+Do not add any text before or after the JSON.
+
+Use exactly this format:
+
+[
+  {
+    "questionText": "Question here",
+    "options": [
+      "Option A",
+      "Option B",
+      "Option C",
+      "Option D"
+    ],
+    "correctAnswerIndex": 0,
+    "explanation": "Explanation here"
+  }
+]`;
+
+    // Ask Gemini to generate questions
+    const result = await model.generateContent(prompt);
+
+    let responseText = result.response.text();
+
+    // Remove markdown code fences if Gemini adds them
+    responseText = responseText
+      .replace(/```json\n?/g, "")
+      .replace(/```\n?/g, "")
+      .trim();
+
+    // Convert AI response to JavaScript array
+    const questions = JSON.parse(responseText);
+
+    if (!Array.isArray(questions)) {
+      return res.status(500).json({
+        message: "AI returned an invalid question format",
+      });
+    }
+
+    // Validate questions before saving
+    for (const question of questions) {
+      if (
+        !question.questionText ||
+        !Array.isArray(question.options) ||
+        question.options.length !== 4 ||
+        typeof question.correctAnswerIndex !== "number"
+      ) {
+        return res.status(500).json({
+          message: "AI generated an invalid question structure",
+        });
+      }
+    }
+
+    // Prepare questions for MongoDB
+    const questionsToSave = questions.map((question) => ({
+      exam,
+      subject,
+      questionText: question.questionText,
+      options: question.options,
+      correctAnswerIndex: question.correctAnswerIndex,
+      explanation: question.explanation || "",
+      difficulty: difficulty || "Medium",
+    }));
+
+    // Save all questions to MongoDB
+    const savedQuestions = await Question.insertMany(
+      questionsToSave
+    );
+
+    res.status(201).json({
+      message: `${savedQuestions.length} questions generated and saved successfully`,
+      questions: savedQuestions,
+    });
+  } catch (error) {
+    console.error("Question generation error:", error);
+
+    res.status(500).json({
+      message:
+        "Failed to generate questions: " + error.message,
+    });
+  }
+};
+
+
+// =====================================================
+// Export Controllers
+// =====================================================
 
 module.exports = {
   solveDoubt,
   evaluateAnswer,
   generateStudyPlan,
   generateQuizFromPDF,
+  generateQuestionBank,
 };

@@ -57,6 +57,11 @@ function Navbar() {
       icon: "▥",
     },
     {
+      name: "Exams",
+      path: "/exams",
+      icon: "📚",
+    },
+    {
       name: "Previous Year Papers",
       path: "/papers",
       icon: "▤",
