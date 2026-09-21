@@ -1,7 +1,21 @@
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import api from "../api/axios";
 
 function Home() {
   const navigate = useNavigate();
+
+  const [stats, setStats] = useState({
+    accuracy: 0,
+    questionsSolved: 0,
+    correctAnswers: 0,
+    totalAttempts: 0,
+  });
+
+  const [loadingStats, setLoadingStats] = useState(true);
+  const [streak, setStreak] = useState(0);
+  const [weekDays, setWeekDays] = useState([]);
+  const [todayQuestions, setTodayQuestions] = useState(0);
 
   const quickActions = [
     {
@@ -64,22 +78,139 @@ function Home() {
     },
   ];
 
+  // =========================================
+  // FETCH ATTEMPTS + CALCULATE STATISTICS
+  // =========================================
+
+  useEffect(() => {
+    const fetchAttempts = async () => {
+      try {
+        const res = await api.get("/attempts");
+
+        const attempts = res.data;
+        // =========================================
+        // CALCULATE TODAY'S QUESTIONS
+        // =========================================
+
+        const today = new Date();
+
+        const todayQuestionsCount = attempts
+          .filter((attempt) => {
+            const attemptDate = new Date(attempt.attemptedAt);
+
+            return (
+              attemptDate.getFullYear() === today.getFullYear() &&
+              attemptDate.getMonth() === today.getMonth() &&
+              attemptDate.getDate() === today.getDate()
+            );
+          })
+          .reduce(
+            (total, attempt) => total + Number(attempt.totalQuestions || 0),
+            0,
+          );
+
+        setTodayQuestions(todayQuestionsCount);
+
+        // =========================================
+        // CALCULATE PROGRESS STATISTICS
+        // =========================================
+
+        let totalQuestions = 0;
+        let correctAnswers = 0;
+
+        attempts.forEach((attempt) => {
+          totalQuestions += Number(attempt.totalQuestions || 0);
+          correctAnswers += Number(attempt.score || 0);
+        });
+
+        const accuracy =
+          totalQuestions > 0
+            ? Math.round((correctAnswers / totalQuestions) * 100)
+            : 0;
+
+        setStats({
+          accuracy,
+          questionsSolved: totalQuestions,
+          correctAnswers,
+          totalAttempts: attempts.length,
+        });
+
+        // =========================================
+        // CALCULATE STUDY STREAK
+        // =========================================
+
+        const studyDates = new Set(
+          attempts.map((attempt) =>
+            new Date(attempt.attemptedAt).toDateString(),
+          ),
+        );
+
+        let currentStreak = 0;
+
+        const checkDate = new Date(today);
+
+        while (studyDates.has(checkDate.toDateString())) {
+          currentStreak++;
+
+          checkDate.setDate(checkDate.getDate() - 1);
+        }
+
+        setStreak(currentStreak);
+
+        // =========================================
+        // CALCULATE CURRENT WEEK
+        // =========================================
+
+        const currentDay = today.getDay();
+
+        const mondayOffset = currentDay === 0 ? -6 : 1 - currentDay;
+
+        const monday = new Date(today);
+
+        monday.setDate(today.getDate() + mondayOffset);
+
+        const days = [];
+
+        for (let i = 0; i < 7; i++) {
+          const date = new Date(monday);
+
+          date.setDate(monday.getDate() + i);
+
+          days.push({
+            label: date
+              .toLocaleDateString("en-US", {
+                weekday: "short",
+              })
+              .charAt(0),
+
+            completed: studyDates.has(date.toDateString()),
+          });
+        }
+
+        setWeekDays(days);
+      } catch (error) {
+        console.error("Failed to load attempt statistics:", error);
+      } finally {
+        setLoadingStats(false);
+      }
+    };
+
+    fetchAttempts();
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-7xl">
-
         {/* ========================================= */}
         {/* WELCOME HERO */}
         {/* ========================================= */}
 
         <section className="relative mb-8 overflow-hidden rounded-3xl bg-gradient-to-r from-blue-50 via-white to-indigo-50 p-6 shadow-sm md:p-8">
-
-          {/* Decorative circles */}
           <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-blue-100 opacity-60" />
+
           <div className="absolute -bottom-20 right-32 h-40 w-40 rounded-full bg-indigo-100 opacity-50" />
 
           <div className="relative z-10 max-w-4xl">
-
             <p className="mb-2 text-sm font-semibold uppercase tracking-wide text-blue-600">
               Your preparation journey
             </p>
@@ -89,14 +220,11 @@ function Home() {
             </h1>
 
             <p className="mt-3 max-w-2xl text-base leading-7 text-gray-600">
-              Prepare smarter with previous year papers, mock tests,
-              question banks and AI-powered learning tools.
+              Prepare smarter with previous year papers, mock tests, question
+              banks and AI-powered learning tools.
             </p>
 
-            {/* Search / preparation box */}
-
             <div className="mt-6 flex flex-col gap-3 rounded-2xl bg-white p-3 shadow-sm md:flex-row">
-
               <div className="flex flex-1 items-center gap-3 rounded-xl border border-gray-200 px-4 py-3">
                 <span className="text-xl">🎯</span>
 
@@ -105,9 +233,7 @@ function Home() {
                     What are you preparing for?
                   </p>
 
-                  <p className="font-semibold text-gray-800">
-                    SSC CGL
-                  </p>
+                  <p className="font-semibold text-gray-800">SSC CGL</p>
                 </div>
               </div>
 
@@ -117,7 +243,6 @@ function Home() {
               >
                 Start Preparing →
               </button>
-
             </div>
           </div>
         </section>
@@ -127,14 +252,8 @@ function Home() {
         {/* ========================================= */}
 
         <div className="grid grid-cols-1 gap-6 xl:grid-cols-3">
-
-          {/* ========================================= */}
-          {/* LEFT / MAIN CONTENT */}
-          {/* ========================================= */}
-
           <div className="space-y-6 xl:col-span-2">
-
-            {/* Quick Actions */}
+            {/* QUICK ACTIONS */}
 
             <section>
               <div className="mb-4">
@@ -148,7 +267,6 @@ function Home() {
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-
                 {quickActions.map((action) => (
                   <button
                     key={action.title}
@@ -156,15 +274,11 @@ function Home() {
                     className={`group rounded-2xl border p-5 text-left transition duration-200 hover:-translate-y-1 hover:shadow-lg ${action.style}`}
                   >
                     <div className="flex items-center justify-between">
-
-                      <span className="text-3xl">
-                        {action.icon}
-                      </span>
+                      <span className="text-3xl">{action.icon}</span>
 
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-blue-600 shadow-sm transition group-hover:translate-x-1">
                         →
                       </span>
-
                     </div>
 
                     <h3 className="mt-5 font-bold text-gray-800">
@@ -176,16 +290,13 @@ function Home() {
                     </p>
                   </button>
                 ))}
-
               </div>
             </section>
 
-            {/* Popular Exams */}
+            {/* EXPLORE EXAMS */}
 
             <section className="rounded-2xl bg-white p-6 shadow-sm">
-
               <div className="mb-5 flex items-center justify-between">
-
                 <div>
                   <h2 className="text-xl font-bold text-gray-800">
                     📚 Explore Exams
@@ -202,137 +313,125 @@ function Home() {
                 >
                   View All →
                 </button>
-
               </div>
 
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-
                 {exams.map((exam) => (
                   <button
                     key={exam.name}
                     onClick={() => navigate("/exams")}
                     className="flex items-center gap-4 rounded-xl border border-gray-100 p-4 text-left transition hover:border-blue-200 hover:bg-blue-50"
                   >
-
                     <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-2xl">
                       {exam.icon}
                     </div>
 
                     <div>
-                      <h3 className="font-bold text-gray-800">
-                        {exam.name}
-                      </h3>
+                      <h3 className="font-bold text-gray-800">{exam.name}</h3>
 
                       <p className="mt-1 text-xs text-gray-500">
                         {exam.description}
                       </p>
                     </div>
 
-                    <span className="ml-auto text-gray-400">
-                      →
-                    </span>
-
+                    <span className="ml-auto text-gray-400">→</span>
                   </button>
                 ))}
-
               </div>
             </section>
 
-            {/* Progress */}
+            {/* REAL PROGRESS */}
 
             <section className="rounded-2xl bg-white p-6 shadow-sm">
-
               <div className="mb-5">
                 <h2 className="text-xl font-bold text-gray-800">
                   📊 Your Progress
                 </h2>
 
                 <p className="mt-1 text-sm text-gray-500">
-                  Keep track of your preparation.
+                  Your statistics are based on your completed mock tests.
                 </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-
-                {/* Streak */}
+                {/* DAY STREAK */}
 
                 <div className="rounded-xl border border-orange-100 bg-orange-50 p-5">
                   <span className="text-2xl">🔥</span>
 
                   <p className="mt-3 text-2xl font-bold text-gray-800">
-                    5
+                    {loadingStats ? "..." : streak}
                   </p>
 
-                  <p className="text-sm text-gray-500">
-                    Day Streak
-                  </p>
+                  <p className="text-sm text-gray-500">Day Streak</p>
 
                   <p className="mt-2 text-xs font-medium text-orange-600">
-                    Keep it going!
+                    {streak > 0 ? "Keep it going!" : "Start today!"}
                   </p>
                 </div>
 
-                {/* Accuracy */}
+                {/* ACCURACY */}
 
                 <div className="rounded-xl border border-blue-100 bg-blue-50 p-5">
                   <span className="text-2xl">🎯</span>
 
                   <p className="mt-3 text-2xl font-bold text-gray-800">
-                    72%
+                    {loadingStats ? "..." : `${stats.accuracy}%`}
                   </p>
 
-                  <p className="text-sm text-gray-500">
-                    Accuracy
-                  </p>
+                  <p className="text-sm text-gray-500">Accuracy</p>
 
                   <p className="mt-2 text-xs font-medium text-blue-600">
-                    ↑ Improving
+                    Based on attempts
                   </p>
                 </div>
 
-                {/* Questions */}
+                {/* QUESTIONS */}
 
                 <div className="rounded-xl border border-purple-100 bg-purple-50 p-5">
                   <span className="text-2xl">📝</span>
 
                   <p className="mt-3 text-2xl font-bold text-gray-800">
-                    48
+                    {loadingStats ? "..." : stats.questionsSolved}
                   </p>
 
-                  <p className="text-sm text-gray-500">
-                    Questions Solved
-                  </p>
+                  <p className="text-sm text-gray-500">Questions Solved</p>
 
                   <p className="mt-2 text-xs font-medium text-purple-600">
-                    Keep practicing
+                    From mock tests
                   </p>
                 </div>
 
-                {/* Correct */}
+                {/* CORRECT */}
 
                 <div className="rounded-xl border border-green-100 bg-green-50 p-5">
                   <span className="text-2xl">✅</span>
 
                   <p className="mt-3 text-2xl font-bold text-gray-800">
-                    35
+                    {loadingStats ? "..." : stats.correctAnswers}
                   </p>
 
-                  <p className="text-sm text-gray-500">
-                    Correct Answers
-                  </p>
+                  <p className="text-sm text-gray-500">Correct Answers</p>
 
                   <p className="mt-2 text-xs font-medium text-green-600">
-                    Great work!
+                    Keep practicing!
                   </p>
                 </div>
-
               </div>
+
+              {!loadingStats && (
+                <p className="mt-5 text-sm text-gray-400">
+                  Mock tests completed:{" "}
+                  <span className="font-semibold text-gray-600">
+                    {stats.totalAttempts}
+                  </span>
+                </p>
+              )}
             </section>
 
-            {/* Continue Preparing */}
+            {/* CONTINUE PREPARING */}
 
             <section className="rounded-2xl bg-white p-6 shadow-sm">
-
               <div className="mb-5">
                 <h2 className="text-xl font-bold text-gray-800">
                   📖 Continue Preparing
@@ -344,23 +443,16 @@ function Home() {
               </div>
 
               <div className="flex flex-col gap-4 rounded-2xl border border-blue-100 bg-blue-50 p-5 md:flex-row md:items-center">
-
                 <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-blue-600 text-2xl text-white">
                   📋
                 </div>
 
                 <div className="flex-1">
+                  <h3 className="font-bold text-gray-800">SSC CGL</h3>
 
-                  <h3 className="font-bold text-gray-800">
-                    SSC CGL
-                  </h3>
-
-                  <p className="text-sm text-gray-500">
-                    Quantitative Aptitude
-                  </p>
+                  <p className="text-sm text-gray-500">Quantitative Aptitude</p>
 
                   <div className="mt-3 flex items-center gap-3">
-
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
                       <div
                         className="h-full rounded-full bg-blue-600"
@@ -368,111 +460,87 @@ function Home() {
                       />
                     </div>
 
-                    <span className="text-sm font-bold text-blue-700">
-                      72%
-                    </span>
-
+                    <span className="text-sm font-bold text-blue-700">72%</span>
                   </div>
                 </div>
 
                 <button
-                  onClick={() =>
-                    navigate("/exams/ssc/ssc-cgl")
-                  }
+                  onClick={() => navigate("/exams/ssc/ssc-cgl")}
                   className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Continue →
                 </button>
-
               </div>
             </section>
-
           </div>
 
-          {/* ========================================= */}
           {/* RIGHT SIDEBAR */}
-          {/* ========================================= */}
 
           <div className="space-y-6">
-
-            {/* Study Streak */}
+            {/* STUDY STREAK */}
 
             <section className="rounded-2xl border border-orange-100 bg-gradient-to-br from-orange-50 to-white p-6 shadow-sm">
-
               <div className="flex items-center justify-between">
-
                 <h2 className="text-lg font-bold text-gray-800">
                   🔥 Study Streak
                 </h2>
 
                 <span className="rounded-full bg-orange-100 px-3 py-1 text-xs font-semibold text-orange-600">
-                  Keep it up!
+                  {streak > 0 ? "Keep it up!" : "Start today!"}
                 </span>
-
               </div>
 
               <p className="mt-5 text-4xl font-bold text-gray-800">
-                3 <span className="text-xl">days</span>
+                {loadingStats ? "..." : streak}{" "}
+                <span className="text-xl">{streak === 1 ? "day" : "days"}</span>
               </p>
 
               <p className="mt-1 text-sm text-gray-500">
-                You're on a roll! 🔥
+                {streak > 0
+                  ? "You're on a roll! 🔥"
+                  : "Complete a mock test to start your streak."}
               </p>
 
               <div className="mt-5 grid grid-cols-7 gap-2">
-
-                {["M", "T", "W", "T", "F", "S", "S"].map(
-                  (day, index) => (
+                {weekDays.map((day, index) => (
+                  <div key={`${day.label}-${index}`} className="text-center">
                     <div
-                      key={`${day}-${index}`}
-                      className="text-center"
+                      className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs ${
+                        day.completed
+                          ? "bg-green-500 text-white"
+                          : "bg-gray-100 text-gray-400"
+                      }`}
                     >
-                      <div
-                        className={`mx-auto flex h-7 w-7 items-center justify-center rounded-full text-xs ${
-                          index < 3
-                            ? "bg-green-500 text-white"
-                            : "bg-gray-100 text-gray-400"
-                        }`}
-                      >
-                        {index < 3 ? "✓" : ""}
-                      </div>
-
-                      <p className="mt-1 text-[10px] text-gray-400">
-                        {day}
-                      </p>
+                      {day.completed ? "✓" : ""}
                     </div>
-                  )
-                )}
 
+                    <p className="mt-1 text-[10px] text-gray-400">
+                      {day.label}
+                    </p>
+                  </div>
+                ))}
               </div>
             </section>
 
-            {/* Today's Goal */}
+            {/* TODAY'S GOAL */}
+
+            {/* TODAY'S GOAL */}
 
             <section className="rounded-2xl bg-white p-6 shadow-sm">
-
               <div className="flex items-center gap-3">
-
                 <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-xl">
                   🎯
                 </div>
 
                 <div>
-                  <h2 className="font-bold text-gray-800">
-                    Today's Goal
-                  </h2>
-
-                  <p className="text-xs text-gray-500">
-                    Keep making progress
-                  </p>
+                  <h2 className="font-bold text-gray-800">Today's Goal</h2>
                 </div>
-
               </div>
 
-              <div className="mt-5 flex items-end justify-between">
-
+              <div className="mt-4 flex items-end justify-between">
                 <p className="text-2xl font-bold text-gray-800">
-                  8
+                  {loadingStats ? "..." : Math.min(todayQuestions, 10)}
+
                   <span className="text-base font-normal text-gray-400">
                     {" "}
                     / 10 questions
@@ -480,34 +548,41 @@ function Home() {
                 </p>
 
                 <span className="text-sm font-semibold text-blue-600">
-                  80%
+                  {loadingStats
+                    ? "..."
+                    : `${Math.min(
+                        Math.round((todayQuestions / 10) * 100),
+                        100,
+                      )}%`}
                 </span>
-
               </div>
 
               <div className="mt-3 h-2 overflow-hidden rounded-full bg-gray-100">
                 <div
                   className="h-full rounded-full bg-blue-600"
-                  style={{ width: "80%" }}
+                  style={{
+                    width: `${Math.min((todayQuestions / 10) * 100, 100)}%`,
+                  }}
                 />
               </div>
 
               <p className="mt-3 text-xs text-gray-500">
-                Only 2 more questions to complete today's goal.
+                {todayQuestions >= 10
+                  ? "🎉 Today's goal completed!"
+                  : `Only ${10 - todayQuestions} more ${
+                      10 - todayQuestions === 1 ? "question" : "questions"
+                    } to complete today's goal.`}
               </p>
-
             </section>
 
-            {/* Recommended */}
+            {/* RECOMMENDED */}
 
             <section className="rounded-2xl bg-white p-6 shadow-sm">
-
               <h2 className="text-lg font-bold text-gray-800">
                 💡 Recommended
               </h2>
 
               <div className="mt-4 divide-y">
-
                 <button
                   onClick={() => navigate("/mock-tests")}
                   className="flex w-full items-center gap-3 py-4 text-left"
@@ -524,9 +599,7 @@ function Home() {
                     </p>
                   </div>
 
-                  <span className="text-gray-400">
-                    →
-                  </span>
+                  <span className="text-gray-400">→</span>
                 </button>
 
                 <button
@@ -545,9 +618,7 @@ function Home() {
                     </p>
                   </div>
 
-                  <span className="text-gray-400">
-                    →
-                  </span>
+                  <span className="text-gray-400">→</span>
                 </button>
 
                 <button
@@ -566,25 +637,17 @@ function Home() {
                     </p>
                   </div>
 
-                  <span className="text-gray-400">
-                    →
-                  </span>
+                  <span className="text-gray-400">→</span>
                 </button>
-
               </div>
             </section>
-
           </div>
         </div>
 
-        {/* ========================================= */}
         {/* BOTTOM MOTIVATION */}
-        {/* ========================================= */}
 
         <section className="mt-8 overflow-hidden rounded-2xl bg-gradient-to-r from-blue-700 to-indigo-700 p-6 text-white shadow-lg">
-
           <div className="flex flex-col items-center justify-between gap-4 text-center md:flex-row md:text-left">
-
             <div>
               <h2 className="text-xl font-bold">
                 🚀 Small steps every day lead to big results.
@@ -601,11 +664,8 @@ function Home() {
             >
               Start Practicing →
             </button>
-
           </div>
-
         </section>
-
       </div>
     </div>
   );
