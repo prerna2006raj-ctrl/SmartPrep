@@ -7,9 +7,7 @@ const Question = require("../models/Question");
 
 const getMockTests = async (req, res) => {
   try {
-    const tests = await MockTest.find().select(
-      "-questions.correctAnswerIndex"
-    );
+    const tests = await MockTest.find().select("-questions.correctAnswerIndex");
 
     res.status(200).json(tests);
   } catch (error) {
@@ -18,7 +16,6 @@ const getMockTests = async (req, res) => {
     });
   }
 };
-
 
 // =====================================================
 // Get single mock test
@@ -42,7 +39,6 @@ const getMockTestById = async (req, res) => {
   }
 };
 
-
 // =====================================================
 // Create mock test manually
 // =====================================================
@@ -61,29 +57,19 @@ const createMockTest = async (req, res) => {
   }
 };
 
-
 // =====================================================
 // Generate Mock Test automatically
 // =====================================================
 
 const generateMockTest = async (req, res) => {
   try {
-    const {
-      examCategory,
-      subject,
-      numberOfQuestions,
-      durationMinutes,
-    } = req.body;
+    const { examCategory, subject, numberOfQuestions, durationMinutes } =
+      req.body;
 
     // Validate input
-    if (
-      !examCategory ||
-      !numberOfQuestions ||
-      !durationMinutes
-    ) {
+    if (!examCategory || !numberOfQuestions || !durationMinutes) {
       return res.status(400).json({
-        message:
-          "Exam, number of questions and duration are required",
+        message: "Exam, number of questions and duration are required",
       });
     }
 
@@ -133,6 +119,7 @@ const generateMockTest = async (req, res) => {
     const mockTest = new MockTest({
       title,
       examCategory,
+      subject: subject || "",
       durationMinutes: Number(durationMinutes),
       questions: mockQuestions,
     });
@@ -147,12 +134,10 @@ const generateMockTest = async (req, res) => {
     console.error("Mock test generation error:", error);
 
     res.status(500).json({
-      message:
-        "Failed to generate mock test: " + error.message,
+      message: "Failed to generate mock test: " + error.message,
     });
   }
 };
-
 
 module.exports = {
   getMockTests,

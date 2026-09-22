@@ -16,6 +16,7 @@ function Home() {
   const [streak, setStreak] = useState(0);
   const [weekDays, setWeekDays] = useState([]);
   const [todayQuestions, setTodayQuestions] = useState(0);
+  
 
   const quickActions = [
     {
