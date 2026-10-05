@@ -18,7 +18,7 @@ const solveDoubt = async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
     });
 
     const prompt = `You are a helpful tutor for Indian competitive exam students (UPSC, SSC, Banking, Railways, etc.). Explain the following doubt clearly and simply, using examples where helpful. Keep the explanation concise but complete.
@@ -52,7 +52,7 @@ const evaluateAnswer = async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
     });
 
     const prompt = `You are an expert UPSC Mains answer evaluator. Evaluate the student's answer below using this rubric:
@@ -108,7 +108,7 @@ const generateStudyPlan = async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
     });
 
     const today = new Date().toDateString();
@@ -171,7 +171,7 @@ const generateQuizFromPDF = async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
     });
 
     const prompt = `You are creating a multiple-choice quiz based on the following study material. Generate exactly 5 questions based on the key facts and concepts in this text.
@@ -232,7 +232,7 @@ const generateQuestionBank = async (req, res) => {
     }
 
     const model = genAI.getGenerativeModel({
-      model: "gemini-3.6-flash",
+      model: "gemini-3.8-flash",
     });
 
     const prompt = `You are an expert question setter for Indian competitive exams.

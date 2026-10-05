@@ -111,7 +111,7 @@ const generateMockTest = async (req, res) => {
 
     if (missingQuestions > 0) {
       const model = genAI.getGenerativeModel({
-        model: "gemini-3.6-flash",
+        model: "gemini-3.8-flash",
       });
 
       const prompt = `You are an expert question setter for Indian competitive exams.

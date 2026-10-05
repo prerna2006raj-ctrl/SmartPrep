@@ -53,27 +53,19 @@ function MockTests() {
     } catch (err) {
       console.error(err);
 
-      setError(
-        err.response?.data?.message ||
-          "Failed to generate mock test."
-      );
+      setError(err.response?.data?.message || "Failed to generate mock test.");
     } finally {
       setGenerating(false);
     }
   };
 
   if (loading) {
-    return (
-      <p className="mt-10 text-center">
-        Loading mock tests...
-      </p>
-    );
+    return <p className="mt-10 text-center">Loading mock tests...</p>;
   }
 
   return (
     <div className="min-h-screen bg-gray-50 px-6 py-10">
       <div className="mx-auto max-w-6xl">
-
         {/* Page heading */}
         <h1 className="mb-8 text-center text-3xl font-bold text-blue-700">
           Mock Tests
@@ -86,12 +78,11 @@ function MockTests() {
           </h2>
 
           <p className="mb-6 text-sm text-gray-500">
-            Automatically create a mock test using questions from
-            the Question Bank.
+            Automatically create a mock test using questions from the Question
+            Bank.
           </p>
 
           <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
-
             {/* Exam */}
             <div>
               <label className="mb-2 block text-sm font-medium text-gray-700">
@@ -106,9 +97,7 @@ function MockTests() {
                 <option value="SSC CGL">SSC CGL</option>
                 <option value="SSC CHSL">SSC CHSL</option>
                 <option value="SSC MTS">SSC MTS</option>
-                <option value="UPSC Civil Services">
-                  UPSC Civil Services
-                </option>
+                <option value="UPSC Civil Services">UPSC Civil Services</option>
                 <option value="IBPS PO">IBPS PO</option>
                 <option value="SBI PO">SBI PO</option>
                 <option value="RRB NTPC">RRB NTPC</option>
@@ -130,15 +119,11 @@ function MockTests() {
                 <option value="Quantitative Aptitude">
                   Quantitative Aptitude
                 </option>
-                <option value="Reasoning">
-                  Reasoning
+                <option value="General Intelligence & Reasoning">
+                  General Intelligence & Reasoning
                 </option>
-                <option value="English">
-                  English
-                </option>
-                <option value="General Awareness">
-                  General Awareness
-                </option>
+                <option value="English">English</option>
+                <option value="General Awareness">General Awareness</option>
               </select>
             </div>
 
@@ -150,14 +135,11 @@ function MockTests() {
 
               <select
                 value={numberOfQuestions}
-                onChange={(e) =>
-                  setNumberOfQuestions(e.target.value)
-                }
+                onChange={(e) => setNumberOfQuestions(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500"
               >
                 <option value="5">5 Questions</option>
                 <option value="10">10 Questions</option>
-                
               </select>
             </div>
 
@@ -169,9 +151,7 @@ function MockTests() {
 
               <select
                 value={durationMinutes}
-                onChange={(e) =>
-                  setDurationMinutes(e.target.value)
-                }
+                onChange={(e) => setDurationMinutes(e.target.value)}
                 className="w-full rounded-lg border border-gray-300 px-4 py-2 outline-none focus:border-blue-500"
               >
                 <option value="10">10 Minutes</option>
@@ -188,9 +168,7 @@ function MockTests() {
             disabled={generating}
             className="mt-6 rounded-lg bg-blue-700 px-6 py-3 text-sm font-semibold text-white transition hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-gray-400"
           >
-            {generating
-              ? "Generating Mock Test..."
-              : "Generate Mock Test"}
+            {generating ? "Generating Mock Test..." : "Generate Mock Test"}
           </button>
 
           {/* Success message */}
@@ -223,13 +201,10 @@ function MockTests() {
                 {test.title}
               </h3>
 
-              <p className="mb-2 text-sm text-gray-500">
-                {test.examCategory}
-              </p>
+              <p className="mb-2 text-sm text-gray-500">{test.examCategory}</p>
 
               <p className="mb-4 text-sm text-gray-600">
-                {test.questions.length} Questions •{" "}
-                {test.durationMinutes} mins
+                {test.questions.length} Questions • {test.durationMinutes} mins
               </p>
 
               <Link
