@@ -157,8 +157,7 @@ function MockTests() {
               >
                 <option value="5">5 Questions</option>
                 <option value="10">10 Questions</option>
-                <option value="20">20 Questions</option>
-                <option value="50">50 Questions</option>
+                
               </select>
             </div>
 
