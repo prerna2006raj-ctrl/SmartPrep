@@ -18,14 +18,15 @@ const {
 router.get("/", getMockTests);
 
 // Generate mock test automatically
+// Normal logged-in users can generate tests
 router.post(
   "/generate",
   protect,
-  adminOnly,
   generateMockTest
 );
 
 // Create mock test manually
+// Only admins can create tests manually
 router.post(
   "/",
   protect,
