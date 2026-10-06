@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
-
+import examCategories from "../data/examCategories";
 function Home() {
   const navigate = useNavigate();
 
@@ -16,7 +16,11 @@ function Home() {
   const [streak, setStreak] = useState(0);
   const [weekDays, setWeekDays] = useState([]);
   const [todayQuestions, setTodayQuestions] = useState(0);
-  
+  const [selectedExam, setSelectedExam] = useState({
+    name: "SSC CGL",
+    category: "ssc",
+    slug: "ssc-cgl",
+  });
 
   const quickActions = [
     {
@@ -224,22 +228,53 @@ function Home() {
               Prepare smarter with previous year papers, mock tests, question
               banks and AI-powered learning tools.
             </p>
-
             <div className="mt-6 flex flex-col gap-3 rounded-2xl bg-white p-3 shadow-sm md:flex-row">
               <div className="flex flex-1 items-center gap-3 rounded-xl border border-gray-200 px-4 py-3">
                 <span className="text-xl">🎯</span>
 
-                <div>
+                <div className="flex-1">
                   <p className="text-xs text-gray-400">
                     What are you preparing for?
                   </p>
 
-                  <p className="font-semibold text-gray-800">SSC CGL</p>
+                  <select
+                    value={selectedExam.name}
+                    onChange={(e) => {
+                      const selected = examCategories
+                        .flatMap((category) =>
+                          category.exams.map((exam) => ({
+                            name: exam,
+                            category: category.name
+                              .toLowerCase()
+                              .replace(/\s+/g, "-"),
+                            slug: exam.toLowerCase().replace(/\s+/g, "-"),
+                          })),
+                        )
+                        .find((exam) => exam.name === e.target.value);
+
+                      if (selected) {
+                        setSelectedExam(selected);
+                      }
+                    }}
+                    className="mt-1 w-full cursor-pointer bg-transparent font-semibold text-gray-800 outline-none"
+                  >
+                    {examCategories.flatMap((category) =>
+                      category.exams.map((exam) => (
+                        <option key={`${category.name}-${exam}`} value={exam}>
+                          {exam}
+                        </option>
+                      )),
+                    )}
+                  </select>
                 </div>
               </div>
 
               <button
-                onClick={() => navigate("/exams")}
+                onClick={() =>
+                  navigate(
+                    `/exams/${selectedExam.category}/${selectedExam.slug}`,
+                  )
+                }
                 className="rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
               >
                 Start Preparing →
