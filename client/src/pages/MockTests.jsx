@@ -58,7 +58,30 @@ function MockTests() {
       setGenerating(false);
     }
   };
+  const handleDeleteMockTest = async (testId) => {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this mock test?",
+    );
 
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      setError("");
+      setMessage("");
+
+      await api.delete(`/mock-tests/${testId}`);
+
+      setMessage("Mock test deleted successfully.");
+
+      await fetchTests();
+    } catch (err) {
+      console.error(err);
+
+      setError(err.response?.data?.message || "Failed to delete mock test.");
+    }
+  };
   if (loading) {
     return <p className="mt-10 text-center">Loading mock tests...</p>;
   }
@@ -213,6 +236,13 @@ function MockTests() {
               >
                 Start Test
               </Link>
+
+              <button
+                onClick={() => handleDeleteMockTest(test._id)}
+                className="ml-4 rounded-lg bg-red-700 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800"
+              >
+                Delete Test
+              </button>
             </div>
           ))}
         </div>

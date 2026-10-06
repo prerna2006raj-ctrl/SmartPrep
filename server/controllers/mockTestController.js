@@ -1,10 +1,9 @@
 const MockTest = require("../models/MockTest");
 const Question = require("../models/Question");
+const TestAttempt = require("../models/TestAttempt");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 
-const genAI = new GoogleGenerativeAI(
-  process.env.GEMINI_API_KEY
-);
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
 
 // =====================================================
 // Get all mock tests
@@ -266,10 +265,42 @@ Use exactly this format:
     });
   }
 };
+// Delete a mock test
+const deleteMockTest = async (req, res) => {
+  try {
+    const { id } = req.params;
 
+    const mockTest = await MockTest.findById(id);
+
+    if (!mockTest) {
+      return res.status(404).json({
+        message: "Mock test not found",
+      });
+    }
+
+    // Delete related test attempts
+    await TestAttempt.deleteMany({
+      test: id,
+    });
+
+    // Delete the mock test
+    await MockTest.findByIdAndDelete(id);
+
+    res.status(200).json({
+      message: "Mock test deleted successfully",
+    });
+  } catch (error) {
+    console.error("Delete mock test error:", error);
+
+    res.status(500).json({
+      message: error.message,
+    });
+  }
+};
 module.exports = {
   getMockTests,
   getMockTestById,
   createMockTest,
   generateMockTest,
+  deleteMockTest,
 };

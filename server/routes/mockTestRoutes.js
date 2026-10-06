@@ -7,6 +7,7 @@ const {
   getMockTestById,
   createMockTest,
   generateMockTest,
+  deleteMockTest,
 } = require("../controllers/mockTestController");
 
 const {
@@ -32,6 +33,14 @@ router.post(
   protect,
   adminOnly,
   createMockTest
+);
+
+// Delete a mock test
+router.delete(
+  "/:id",
+  protect,
+  adminOnly,
+  deleteMockTest
 );
 
 // Get single mock test
