@@ -16,6 +16,12 @@ function Home() {
   const [streak, setStreak] = useState(0);
   const [weekDays, setWeekDays] = useState([]);
   const [todayQuestions, setTodayQuestions] = useState(0);
+  const [preparationExam, setPreparationExam] = useState("SSC CGL");
+  const [preparationSubject, setPreparationSubject] = useState(
+    "Quantitative Aptitude",
+  );
+  const [preparationProgress, setPreparationProgress] = useState(0);
+  const [preparationQuestions, setPreparationQuestions] = useState(0);
   const [selectedExam, setSelectedExam] = useState({
     name: "SSC CGL",
     category: "ssc",
@@ -93,6 +99,39 @@ function Home() {
         const res = await api.get("/attempts");
 
         const attempts = res.data;
+        // =========================================
+        // CALCULATE CONTINUE PREPARING
+        // =========================================
+
+        if (attempts.length > 0) {
+          const latestAttempt = attempts[0];
+
+          const currentExam = latestAttempt.exam || "SSC CGL";
+          const currentSubject =
+            latestAttempt.subject || "Quantitative Aptitude";
+
+          setPreparationExam(currentExam);
+          setPreparationSubject(currentSubject);
+
+          const relatedAttempts = attempts.filter(
+            (attempt) =>
+              attempt.exam === currentExam &&
+              attempt.subject === currentSubject,
+          );
+
+          const completedQuestions = relatedAttempts.reduce(
+            (total, attempt) => total + Number(attempt.totalQuestions || 0),
+            0,
+          );
+
+          const progress = Math.min(
+            Math.round((completedQuestions / 100) * 100),
+            100,
+          );
+
+          setPreparationQuestions(completedQuestions);
+          setPreparationProgress(progress);
+        }
         // =========================================
         // CALCULATE TODAY'S QUESTIONS
         // =========================================
@@ -484,24 +523,52 @@ function Home() {
                 </div>
 
                 <div className="flex-1">
-                  <h3 className="font-bold text-gray-800">SSC CGL</h3>
+                  <h3 className="font-bold text-gray-800">{preparationExam}</h3>
 
-                  <p className="text-sm text-gray-500">Quantitative Aptitude</p>
+                  <p className="text-sm text-gray-500">{preparationSubject}</p>
 
                   <div className="mt-3 flex items-center gap-3">
                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-gray-200">
                       <div
-                        className="h-full rounded-full bg-blue-600"
-                        style={{ width: "72%" }}
+                        className="h-full rounded-full bg-blue-600 transition-all duration-500"
+                        style={{
+                          width: `${preparationProgress}%`,
+                        }}
                       />
                     </div>
 
-                    <span className="text-sm font-bold text-blue-700">72%</span>
+                    <span className="text-sm font-bold text-blue-700">
+                      {loadingStats ? "..." : `${preparationProgress}%`}
+                    </span>
                   </div>
+
+                  <p className="mt-2 text-xs text-gray-500">
+                    {loadingStats
+                      ? "Loading progress..."
+                      : `${preparationQuestions} / 100 questions completed`}
+                  </p>
                 </div>
 
                 <button
-                  onClick={() => navigate("/exams/ssc/ssc-cgl")}
+                  onClick={() => {
+                    const category = examCategories.find((item) =>
+                      item.exams.includes(preparationExam),
+                    );
+
+                    if (category) {
+                      const categorySlug = category.name
+                        .toLowerCase()
+                        .replace(/\s+/g, "-");
+
+                      const examSlug = preparationExam
+                        .toLowerCase()
+                        .replace(/\s+/g, "-");
+
+                      navigate(`/exams/${categorySlug}/${examSlug}`);
+                    } else {
+                      navigate("/exams");
+                    }
+                  }}
                   className="rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white hover:bg-blue-700"
                 >
                   Continue →
