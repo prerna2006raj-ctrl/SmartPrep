@@ -31,6 +31,7 @@ function ExamPreparation() {
       title: "Question Bank",
       description: "Practice topic-wise questions.",
       icon: "❓",
+      path: "question-bank",
     },
     {
       title: "Study Material",

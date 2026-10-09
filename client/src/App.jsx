@@ -24,6 +24,7 @@ import AIQuizHistory from "./pages/AIQuizHistory";
 import ExamPreparation from "./pages/ExamPreparation";
 import ExamPapers from "./pages/ExamPapers";
 import PerformanceAnalytics from "./pages/PerformanceAnalytics";
+import QuestionBank from "./pages/QuestionBank";
 
 function App() {
   return (
@@ -34,7 +35,6 @@ function App() {
       {/* Main Application Area */}
       <main className="min-h-screen bg-slate-50 pt-[72px] lg:ml-[250px]">
         <Routes>
-
           {/* Home */}
           <Route path="/" element={<Home />} />
 
@@ -44,15 +44,9 @@ function App() {
           {/* Exam Structure */}
           <Route path="/exams" element={<Exams />} />
 
-          <Route
-            path="/exams/:category"
-            element={<ExamCategory />}
-          />
+          <Route path="/exams/:category" element={<ExamCategory />} />
 
-          <Route
-            path="/exams/:category/:exam"
-            element={<ExamPreparation />}
-          />
+          <Route path="/exams/:category/:exam" element={<ExamPreparation />} />
 
           {/* Exam-specific Previous Year Papers */}
           <Route
@@ -77,42 +71,21 @@ function App() {
           {/* Mock Tests */}
           <Route path="/mock-tests" element={<MockTests />} />
 
-          <Route
-            path="/mock-tests/:id"
-            element={<TakeMockTest />}
-          />
+          <Route path="/mock-tests/:id" element={<TakeMockTest />} />
 
           {/* AI Features */}
-          <Route
-            path="/doubt-solver"
-            element={<DoubtSolver />}
-          />
+          <Route path="/doubt-solver" element={<DoubtSolver />} />
 
-          <Route
-            path="/answer-evaluator"
-            element={<AnswerEvaluator />}
-          />
+          <Route path="/answer-evaluator" element={<AnswerEvaluator />} />
 
-          <Route
-            path="/ai-quiz"
-            element={<AIQuizGenerator />}
-          />
+          <Route path="/ai-quiz" element={<AIQuizGenerator />} />
 
-          <Route
-            path="/quiz-history"
-            element={<AIQuizHistory />}
-          />
+          <Route path="/quiz-history" element={<AIQuizHistory />} />
 
           {/* User Features */}
-          <Route
-            path="/bookmarks"
-            element={<Bookmarks />}
-          />
+          <Route path="/bookmarks" element={<Bookmarks />} />
 
-          <Route
-            path="/study-planner"
-            element={<StudyPlanner />}
-          />
+          <Route path="/study-planner" element={<StudyPlanner />} />
 
           {/* Analytics */}
           <Route
@@ -121,22 +94,16 @@ function App() {
           />
 
           {/* Profile & Settings */}
-          <Route
-            path="/profile"
-            element={<Profile />}
-          />
+          <Route path="/profile" element={<Profile />} />
 
-          <Route
-            path="/settings"
-            element={<Settings />}
-          />
+          <Route path="/settings" element={<Settings />} />
 
           {/* Admin */}
+          <Route path="/admin" element={<AdminPanel />} />
           <Route
-            path="/admin"
-            element={<AdminPanel />}
+            path="/exams/:category/:exam/question-bank"
+            element={<QuestionBank />}
           />
-
         </Routes>
       </main>
     </BrowserRouter>

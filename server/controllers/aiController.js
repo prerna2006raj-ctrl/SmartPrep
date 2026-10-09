@@ -1,7 +1,39 @@
+
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const Question = require("../models/Question");
+const { PDFParse } = require("pdf-parse");
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// =====================================================
+// Helper: Get Gemini model
+// =====================================================
+
+const getGeminiModel = () =>
+  genAI.getGenerativeModel({
+    model: "gemini-3.8-flash",
+  });
+
+// =====================================================
+// Helper: Handle AI errors
+// =====================================================
+
+const handleAIError = (res, error, operation) => {
+  console.error(`${operation} error:`, error);
+
+  if (error.status === 503 || error.status === 429) {
+    return res.status(error.status).json({
+      message:
+        error.status === 503
+          ? "AI service is temporarily busy. Please try again later."
+          : "AI request limit reached. Please try again later.",
+    });
+  }
+
+  return res.status(500).json({
+    message: `${operation} failed: ${error.message}`,
+  });
+};
 
 // =====================================================
 // Doubt Solver
@@ -17,9 +49,7 @@ const solveDoubt = async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.8-flash",
-    });
+    const model = getGeminiModel();
 
     const prompt = `You are a helpful tutor for Indian competitive exam students (UPSC, SSC, Banking, Railways, etc.). Explain the following doubt clearly and simply, using examples where helpful. Keep the explanation concise but complete.
 
@@ -30,12 +60,9 @@ Question: ${question}`;
 
     res.status(200).json({ answer });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleAIError(res, error, "Doubt solving");
   }
 };
-
 
 // =====================================================
 // Answer Evaluation
@@ -51,9 +78,7 @@ const evaluateAnswer = async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.8-flash",
-    });
+    const model = getGeminiModel();
 
     const prompt = `You are an expert UPSC Mains answer evaluator. Evaluate the student's answer below using this rubric:
 
@@ -81,12 +106,9 @@ Provide your response in this exact format:
 
     res.status(200).json({ evaluation });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleAIError(res, error, "Answer evaluation");
   }
 };
-
 
 // =====================================================
 // Study Planner
@@ -94,12 +116,7 @@ Provide your response in this exact format:
 
 const generateStudyPlan = async (req, res) => {
   try {
-    const {
-      examName,
-      examDate,
-      hoursPerDay,
-      weakSubjects,
-    } = req.body;
+    const { examName, examDate, hoursPerDay, weakSubjects } = req.body;
 
     if (!examName || !examDate) {
       return res.status(400).json({
@@ -107,10 +124,7 @@ const generateStudyPlan = async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.8-flash",
-    });
-
+    const model = getGeminiModel();
     const today = new Date().toDateString();
 
     const prompt = `You are an expert exam preparation coach for Indian competitive exams. Create a personalized study plan.
@@ -133,20 +147,17 @@ If the timeline is very short (under 2 weeks) or very long (over 6 months), adju
 
     res.status(200).json({ plan });
   } catch (error) {
-    res.status(500).json({
-      message: error.message,
-    });
+    handleAIError(res, error, "Study plan generation");
   }
 };
-
 
 // =====================================================
 // Generate Quiz From PDF
 // =====================================================
 
-const { PDFParse } = require("pdf-parse");
-
 const generateQuizFromPDF = async (req, res) => {
+  let parser;
+
   try {
     if (!req.file) {
       return res.status(400).json({
@@ -154,15 +165,15 @@ const generateQuizFromPDF = async (req, res) => {
       });
     }
 
-    const parser = new PDFParse({
+    parser = new PDFParse({
       data: req.file.buffer,
     });
 
     const pdfData = await parser.getText();
-
     const extractedText = pdfData.text.slice(0, 8000);
 
     await parser.destroy();
+    parser = null;
 
     if (!extractedText || extractedText.trim().length < 50) {
       return res.status(400).json({
@@ -170,9 +181,7 @@ const generateQuizFromPDF = async (req, res) => {
       });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.8-flash",
-    });
+    const model = getGeminiModel();
 
     const prompt = `You are creating a multiple-choice quiz based on the following study material. Generate exactly 5 questions based on the key facts and concepts in this text.
 
@@ -199,16 +208,37 @@ Respond ONLY with valid JSON in this exact format, no extra text, no markdown fo
 
     const questions = JSON.parse(responseText);
 
-    res.status(200).json({
-      questions,
-    });
+    if (
+      !Array.isArray(questions) ||
+      questions.length !== 5 ||
+      questions.some(
+        (question) =>
+          !question.questionText ||
+          !Array.isArray(question.options) ||
+          question.options.length !== 4 ||
+          !Number.isInteger(question.correctAnswerIndex) ||
+          question.correctAnswerIndex < 0 ||
+          question.correctAnswerIndex > 3
+      )
+    ) {
+      return res.status(500).json({
+        message: "AI returned an invalid quiz format",
+      });
+    }
+
+    res.status(200).json({ questions });
   } catch (error) {
-    res.status(500).json({
-      message: "Failed to generate quiz: " + error.message,
-    });
+    handleAIError(res, error, "PDF quiz generation");
+  } finally {
+    if (parser) {
+      try {
+        await parser.destroy();
+      } catch (cleanupError) {
+        console.error("PDF parser cleanup error:", cleanupError);
+      }
+    }
   }
 };
-
 
 // =====================================================
 // Generate Question Bank
@@ -216,127 +246,113 @@ Respond ONLY with valid JSON in this exact format, no extra text, no markdown fo
 
 const generateQuestionBank = async (req, res) => {
   try {
-    const {
-      exam,
-      subject,
-      numberOfQuestions,
-      difficulty,
-    } = req.body;
+    const { exam, subject, numberOfQuestions, difficulty } = req.body;
 
-    // Validate input
-    if (!exam || !subject || !numberOfQuestions) {
+    const count = Number(numberOfQuestions);
+
+    if (
+      !exam ||
+      !subject ||
+      !Number.isInteger(count) ||
+      count < 1 ||
+      count > 20
+    ) {
       return res.status(400).json({
         message:
-          "Exam, subject and number of questions are required",
+          "Exam, subject and a question count between 1 and 20 are required",
       });
     }
 
-    const model = genAI.getGenerativeModel({
-      model: "gemini-3.8-flash",
-    });
+    const model = getGeminiModel();
 
     const prompt = `You are an expert question setter for Indian competitive exams.
 
-Generate exactly ${numberOfQuestions} multiple-choice questions for:
+Generate exactly ${count} important multiple-choice questions for:
 
 Exam: ${exam}
 Subject: ${subject}
 Difficulty: ${difficulty || "Medium"}
 
 Requirements:
-- Questions must be relevant to the specified exam and subject.
-- Each question must have exactly 4 options.
+- Focus on important concepts and frequently tested areas.
+- Each question must have exactly 4 distinct options.
 - Only one option should be correct.
-- correctAnswerIndex must be 0, 1, 2, or 3.
+- correctAnswerIndex must be an integer from 0 to 3.
 - Do not repeat questions.
-- Questions should be useful for competitive exam preparation.
-- Include a short explanation for every answer.
-- Make sure the correctAnswerIndex matches the correct option.
+- Include a clear explanation for every answer.
+- Include a specific topic for every question.
+- Ensure the answer index matches the correct option.
+- These questions are for the learning and revision Question Bank, NOT timed Mock Tests.
+- Return exactly ${count} questions.
 
-Respond ONLY with valid JSON.
-Do not use markdown.
-Do not add any text before or after the JSON.
+Respond ONLY with valid JSON, without markdown or extra text.
 
-Use exactly this format:
-
+Format:
 [
   {
     "questionText": "Question here",
-    "options": [
-      "Option A",
-      "Option B",
-      "Option C",
-      "Option D"
-    ],
+    "options": ["Option A", "Option B", "Option C", "Option D"],
     "correctAnswerIndex": 0,
-    "explanation": "Explanation here"
+    "explanation": "Explanation here",
+    "topic": "Specific topic here"
   }
 ]`;
 
-    // Ask Gemini to generate questions
     const result = await model.generateContent(prompt);
 
     let responseText = result.response.text();
 
-    // Remove markdown code fences if Gemini adds them
     responseText = responseText
       .replace(/```json\n?/g, "")
       .replace(/```\n?/g, "")
       .trim();
 
-    // Convert AI response to JavaScript array
     const questions = JSON.parse(responseText);
 
-    if (!Array.isArray(questions)) {
+    if (
+      !Array.isArray(questions) ||
+      questions.length !== count ||
+      questions.some(
+        (question) =>
+          !question.questionText ||
+          !Array.isArray(question.options) ||
+          question.options.length !== 4 ||
+          !Number.isInteger(question.correctAnswerIndex) ||
+          question.correctAnswerIndex < 0 ||
+          question.correctAnswerIndex > 3 ||
+          !question.topic ||
+          !question.explanation
+      )
+    ) {
       return res.status(500).json({
-        message: "AI returned an invalid question format",
+        message: "AI returned an invalid Question Bank format",
       });
     }
 
-    // Validate questions before saving
-    for (const question of questions) {
-      if (
-        !question.questionText ||
-        !Array.isArray(question.options) ||
-        question.options.length !== 4 ||
-        typeof question.correctAnswerIndex !== "number"
-      ) {
-        return res.status(500).json({
-          message: "AI generated an invalid question structure",
-        });
-      }
-    }
-
-    // Prepare questions for MongoDB
+    // Save specifically as Question Bank questions.
     const questionsToSave = questions.map((question) => ({
       exam,
       subject,
-      questionText: question.questionText,
+      topic: question.topic.trim(),
+      questionText: question.questionText.trim(),
       options: question.options,
       correctAnswerIndex: question.correctAnswerIndex,
-      explanation: question.explanation || "",
+      explanation: question.explanation,
       difficulty: difficulty || "Medium",
+      isImportant: true,
+      source: "question-bank",
     }));
 
-    // Save all questions to MongoDB
-    const savedQuestions = await Question.insertMany(
-      questionsToSave
-    );
+    const savedQuestions = await Question.insertMany(questionsToSave);
 
     res.status(201).json({
-      message: `${savedQuestions.length} questions generated and saved successfully`,
+      message: `${savedQuestions.length} Question Bank questions generated and saved successfully`,
       questions: savedQuestions,
     });
   } catch (error) {
-    console.error("Question generation error:", error);
-
-    res.status(500).json({
-      message:
-        "Failed to generate questions: " + error.message,
-    });
+    handleAIError(res, error, "Question Bank generation");
   }
 };
-
 
 // =====================================================
 // Export Controllers
