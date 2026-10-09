@@ -11,6 +11,7 @@ const questionRoutes = require("./routes/questionRoutes");
 const aiRoutes = require("./routes/aiRoutes");
 const attemptRoutes = require("./routes/attemptRoutes");
 const aiQuizHistoryRoutes = require("./routes/aiQuizHistoryRoutes");
+const practiceHistoryRoutes = require("./routes/practiceHistory");
 
 const app = express();
 
@@ -20,6 +21,8 @@ app.use(express.json());
 // Routes
 app.use("/api/attempts", attemptRoutes);
 app.use("/api/quiz-history", aiQuizHistoryRoutes);
+app.use("/api/practice-history", practiceHistoryRoutes);
+
 app.use("/api/mock-tests", mockTestRoutes);
 app.use("/api/questions", questionRoutes);
 
