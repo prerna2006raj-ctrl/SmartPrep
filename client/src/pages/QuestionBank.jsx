@@ -1,4 +1,3 @@
-
 import { useEffect, useMemo, useState } from "react";
 import { useParams } from "react-router-dom";
 import api from "../api/axios";
@@ -12,7 +11,11 @@ const SUBJECTS = [
 ];
 
 const slugify = (value = "") =>
-  value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  value
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
 
 function QuestionBank() {
   const { category, exam } = useParams();
@@ -21,11 +24,11 @@ function QuestionBank() {
   // to the exact exam name stored in MongoDB: "SSC CGL".
   const examName = useMemo(() => {
     const categoryData = examCategories.find(
-      (item) => slugify(item.name) === slugify(category)
+      (item) => slugify(item.name) === slugify(category),
     );
 
     const matchedExam = categoryData?.exams.find(
-      (item) => slugify(item) === slugify(exam)
+      (item) => slugify(item) === slugify(exam),
     );
 
     if (matchedExam) return matchedExam;
@@ -33,7 +36,7 @@ function QuestionBank() {
     // Fallback for routes whose exam slug includes the category.
     const allExams = examCategories.flatMap((item) => item.exams);
     const matchedBySlug = allExams.find(
-      (item) => slugify(item) === slugify(exam)
+      (item) => slugify(item) === slugify(exam),
     );
 
     if (matchedBySlug) return matchedBySlug;
@@ -42,7 +45,7 @@ function QuestionBank() {
       ? exam
           .split("-")
           .map((word) =>
-            word ? word.charAt(0).toUpperCase() + word.slice(1) : ""
+            word ? word.charAt(0).toUpperCase() + word.slice(1) : "",
           )
           .join(" ")
       : "SSC CGL";
@@ -86,7 +89,7 @@ function QuestionBank() {
           setQuestions([]);
           setError(
             err.response?.data?.message ||
-              "Unable to load Question Bank questions. Please check your connection and try again."
+              "Unable to load Question Bank questions. Please check your connection and try again.",
           );
         }
       } finally {
@@ -101,21 +104,28 @@ function QuestionBank() {
     };
   }, [examName, retryKey]);
 
-  // Build the topic list from the fetched questions.
-  const topics = useMemo(() => {
+  // Build topic names and question counts from fetched questions.
+  const topicCounts = useMemo(() => {
     const matchingQuestions =
       selectedSubject === "All Subjects"
         ? questions
         : questions.filter((q) => q.subject === selectedSubject);
 
-    return [
-      ...new Set(
-        matchingQuestions
-          .map((q) => q.topic || "General")
-          .filter(Boolean)
-      ),
-    ].sort((a, b) => a.localeCompare(b));
+    const counts = matchingQuestions.reduce((result, question) => {
+      const topic = (question.topic || "General").trim() || "General";
+      result[topic] = (result[topic] || 0) + 1;
+      return result;
+    }, {});
+
+    return Object.entries(counts)
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => a.name.localeCompare(b.name));
   }, [questions, selectedSubject]);
+
+  const topics = useMemo(
+    () => topicCounts.map((topic) => topic.name),
+    [topicCounts],
+  );
 
   const filteredQuestions = useMemo(() => {
     return questions.filter((question) => {
@@ -131,14 +141,10 @@ function QuestionBank() {
         selectedDifficulty === "All" ||
         question.difficulty === selectedDifficulty;
 
-      const importantMatches =
-        !importantOnly || question.isImportant === true;
+      const importantMatches = !importantOnly || question.isImportant === true;
 
       return (
-        subjectMatches &&
-        topicMatches &&
-        difficultyMatches &&
-        importantMatches
+        subjectMatches && topicMatches && difficultyMatches && importantMatches
       );
     });
   }, [
@@ -225,6 +231,84 @@ function QuestionBank() {
           </div>
         </div>
 
+        {/* TOPIC-WISE QUESTION COUNTS */}
+
+        <section className="mb-8">
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <h2 className="text-xl font-bold text-slate-900">
+                Explore Topics
+              </h2>
+              <p className="mt-1 text-sm text-slate-500">
+                Select a topic to view its questions.
+              </p>
+            </div>
+
+            <span className="rounded-full bg-indigo-50 px-3 py-1 text-sm font-semibold text-indigo-700">
+              {topicCounts.length} topics
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {/* ALL TOPICS CARD */}
+
+            <button
+              type="button"
+              onClick={() => setSelectedTopic("All Topics")}
+              className={`flex items-center justify-between rounded-xl border p-5 text-left transition ${
+                selectedTopic === "All Topics"
+                  ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100"
+                  : "border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm"
+              }`}
+            >
+              <span>
+                <span className="block font-semibold text-slate-900">
+                  All Topics
+                </span>
+                <span className="mt-1 block text-sm text-slate-500">
+                  Browse every topic
+                </span>
+              </span>
+
+              <span className="rounded-lg bg-indigo-100 px-3 py-2 text-lg font-bold text-indigo-700">
+                {selectedSubject === "All Subjects"
+                  ? questions.length
+                  : questions.filter((q) => q.subject === selectedSubject)
+                      .length}
+              </span>
+            </button>
+
+            {/* INDIVIDUAL TOPIC CARDS */}
+
+            {topicCounts.map((topic) => (
+              <button
+                key={topic.name}
+                type="button"
+                onClick={() => setSelectedTopic(topic.name)}
+                className={`flex items-center justify-between rounded-xl border p-5 text-left transition ${
+                  selectedTopic === topic.name
+                    ? "border-indigo-500 bg-indigo-50 ring-2 ring-indigo-100"
+                    : "border-slate-200 bg-white hover:border-indigo-300 hover:shadow-sm"
+                }`}
+              >
+                <span className="min-w-0 pr-3">
+                  <span className="block font-semibold text-slate-900">
+                    {topic.name}
+                  </span>
+                  <span className="mt-1 block text-sm text-slate-500">
+                    {topic.count === 1
+                      ? "1 question"
+                      : `${topic.count} questions`}
+                  </span>
+                </span>
+
+                <span className="shrink-0 rounded-lg bg-slate-100 px-3 py-2 text-lg font-bold text-slate-700">
+                  {topic.count}
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
         <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-bold">Filter questions</h2>
@@ -284,9 +368,7 @@ function QuestionBank() {
               </span>
               <select
                 value={selectedDifficulty}
-                onChange={(event) =>
-                  setSelectedDifficulty(event.target.value)
-                }
+                onChange={(event) => setSelectedDifficulty(event.target.value)}
                 className="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100"
               >
                 <option value="All">All difficulties</option>
@@ -322,9 +404,7 @@ function QuestionBank() {
 
         {!loading && error && (
           <div className="rounded-2xl border border-red-200 bg-red-50 p-6">
-            <h2 className="font-bold text-red-800">
-              Unable to load questions
-            </h2>
+            <h2 className="font-bold text-red-800">Unable to load questions</h2>
             <p className="mt-2 text-sm text-red-700">{error}</p>
             <button
               type="button"
@@ -342,9 +422,9 @@ function QuestionBank() {
               No questions found for {examName}
             </h2>
             <p className="mt-2 text-sm text-amber-800">
-              The API responded successfully, but no questions matched this
-              exam name. Check the exam route and the exact exam value stored
-              in the database.
+              The API responded successfully, but no questions matched this exam
+              name. Check the exam route and the exact exam value stored in the
+              database.
             </p>
             <button
               type="button"
@@ -412,9 +492,7 @@ function QuestionBank() {
                   </div>
 
                   <h3 className="text-base font-semibold leading-7 text-slate-900 sm:text-lg">
-                    <span className="mr-2 text-indigo-600">
-                      Q{index + 1}.
-                    </span>
+                    <span className="mr-2 text-indigo-600">Q{index + 1}.</span>
                     {question.questionText}
                   </h3>
 
