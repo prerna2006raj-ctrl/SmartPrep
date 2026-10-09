@@ -65,10 +65,6 @@ const createMockTest = async (req, res) => {
 // Generate Mock Test automatically
 // =====================================================
 
-// =====================================================
-// Generate Mock Test automatically
-// =====================================================
-
 const generateMockTest = async (req, res) => {
   try {
     const {
@@ -79,28 +75,23 @@ const generateMockTest = async (req, res) => {
       difficulty,
     } = req.body;
 
-    // -------------------------------------------------
     // 1. Validate input
-    // -------------------------------------------------
-
-    if (!examCategory || !numberOfQuestions || !durationMinutes) {
-      return res.status(400).json({
-        message: "Exam, number of questions and duration are required",
-      });
-    }
-
     const requestedQuestions = Number(numberOfQuestions);
+    const duration = Number(durationMinutes);
 
-    if (requestedQuestions <= 0) {
+    if (
+      !examCategory ||
+      !Number.isInteger(requestedQuestions) ||
+      requestedQuestions < 1 ||
+      !Number.isFinite(duration) ||
+      duration <= 0
+    ) {
       return res.status(400).json({
-        message: "Number of questions must be greater than 0",
+        message: "Please provide a valid exam, question count, and duration.",
       });
     }
 
-    // -------------------------------------------------
-    // 2. Only use Mock Test questions
-    // -------------------------------------------------
-
+    // 2. Match only mock-test questions
     const filter = {
       exam: examCategory,
       source: "mock-test",
@@ -110,73 +101,77 @@ const generateMockTest = async (req, res) => {
       filter.subject = subject;
     }
 
-    // -------------------------------------------------
-    // 3. Check available Mock Test questions
-    // -------------------------------------------------
+    if (difficulty) {
+      filter.difficulty = difficulty;
+    }
 
-    const availableQuestions = await Question.countDocuments(filter);
+    // 3. Count questions matching all selected filters
+    let availableQuestions = await Question.countDocuments(filter);
 
-    console.log(`Available mock-test questions: ${availableQuestions}`);
+    console.log("Mock-test filter:", filter);
+    console.log("Matching questions:", availableQuestions);
 
-    // -------------------------------------------------
-    // 4. Calculate missing questions
-    // -------------------------------------------------
+    // If the exact difficulty has too few questions,
+    // use questions of other difficulties for the same exam/subject.
+    if (availableQuestions < requestedQuestions && difficulty) {
+      const broaderFilter = {
+        exam: examCategory,
+        source: "mock-test",
+      };
 
-    const missingQuestions = requestedQuestions - availableQuestions;
+      if (subject) {
+        broaderFilter.subject = subject;
+      }
 
-    // -------------------------------------------------
-    // 5. Generate missing questions only when required
-    // -------------------------------------------------
+      const broaderCount = await Question.countDocuments(broaderFilter);
 
-    if (missingQuestions > 0) {
-      console.log(`Need ${missingQuestions} more mock-test questions.`);
+      if (broaderCount > availableQuestions) {
+        console.log(
+          `Using all difficulties: ${broaderCount} questions available.`,
+        );
+
+        delete filter.difficulty;
+        availableQuestions = broaderCount;
+      }
+    }
+
+    // 4. Ask Gemini only if the database has too few questions
+    let aiGenerated = 0;
+
+    if (availableQuestions < requestedQuestions) {
+      const missingQuestions = requestedQuestions - availableQuestions;
+
+      console.log(`Need ${missingQuestions} additional questions.`);
 
       try {
+        if (!process.env.GEMINI_API_KEY) {
+          throw new Error("GEMINI_API_KEY is not configured.");
+        }
+
         const model = genAI.getGenerativeModel({
           model: "gemini-3.8-flash",
         });
 
-        const prompt = `You are an expert question setter for Indian competitive exams.
-
-Generate exactly ${missingQuestions} multiple-choice questions for:
+        const prompt = `Generate exactly ${missingQuestions} multiple-choice practice questions.
 
 Exam: ${examCategory}
 Subject: ${subject || "General"}
 Difficulty: ${difficulty || "Medium"}
 
-Requirements:
-- Questions must be suitable for a timed mock test.
-- Questions must be relevant to the specified exam and subject.
-- Each question must have exactly 4 options.
-- Only one option should be correct.
-- correctAnswerIndex must be 0, 1, 2, or 3.
-- Do not repeat questions.
-- Questions should be useful for competitive exam preparation.
-- Include a short explanation for every answer.
-- Include the topic of every question.
-- Make sure correctAnswerIndex matches the correct option.
-- These questions are for Mock Tests, NOT the Question Bank.
+Return ONLY a valid JSON array. Each item must contain:
+{
+  "questionText": "Question text",
+  "options": ["Option A", "Option B", "Option C", "Option D"],
+  "correctAnswerIndex": 0,
+  "explanation": "Short explanation",
+  "topic": "Topic"
+}
 
-Respond ONLY with valid JSON.
-Do not use markdown.
-Do not add any text before or after the JSON.
-
-Use exactly this format:
-
-[
-  {
-    "questionText": "Question here",
-    "options": [
-      "Option A",
-      "Option B",
-      "Option C",
-      "Option D"
-    ],
-    "correctAnswerIndex": 0,
-    "explanation": "Explanation here",
-    "topic": "Topic here"
-  }
-]`;
+Rules:
+- Exactly four non-empty options.
+- correctAnswerIndex must be an integer from 0 to 3.
+- Use original, relevant competitive-exam questions.
+- Do not include markdown or text outside the JSON array.`;
 
         let result;
         let lastError;
@@ -189,23 +184,20 @@ Use exactly this format:
             lastError = error;
 
             const status = error.status || error.statusCode;
-            const isTemporary =
-              status === 503 ||
-              status === 429 ||
-              status === 500 ||
-              status === 502 ||
-              status === 504 ||
-              /503|429|500|502|504|overloaded|high demand/i.test(
+            const temporary =
+              [429, 500, 502, 503, 504].includes(status) ||
+              /overloaded|high demand|503 service unavailable/i.test(
                 error.message || "",
               );
 
-            if (!isTemporary || attempt === 2) {
+            if (!temporary || attempt === 2) {
               throw error;
             }
 
             const delay = 1000 * Math.pow(2, attempt);
+
             console.log(
-              `Gemini temporarily unavailable. Retry ${attempt + 1}/2 in ${delay}ms.`,
+              `Gemini unavailable. Retry ${attempt + 1}/2 in ${delay}ms.`,
             );
 
             await new Promise((resolve) => setTimeout(resolve, delay));
@@ -216,125 +208,109 @@ Use exactly this format:
           throw lastError || new Error("Gemini generation failed.");
         }
 
-        let responseText = result.response.text();
-
-        responseText = responseText
-          .replace(/```json\n?/g, "")
-          .replace(/```\n?/g, "")
+        let responseText = result.response
+          .text()
+          .replace(/```json\s*/gi, "")
+          .replace(/```/g, "")
           .trim();
 
         const generatedQuestions = JSON.parse(responseText);
 
-        // -------------------------------------------------
-        // Validate AI response
-        // -------------------------------------------------
-
-        if (!Array.isArray(generatedQuestions)) {
-          return res.status(500).json({
-            message: "AI returned an invalid question format",
-          });
+        if (
+          !Array.isArray(generatedQuestions) ||
+          generatedQuestions.length !== missingQuestions
+        ) {
+          throw new Error("AI returned an unexpected number of questions.");
         }
 
-        if (generatedQuestions.length !== missingQuestions) {
-          return res.status(500).json({
-            message: "AI did not generate the required number of questions",
-          });
-        }
-
-        for (const question of generatedQuestions) {
+        const questionsToSave = generatedQuestions.map((q) => {
           if (
-            !question.questionText ||
-            !Array.isArray(question.options) ||
-            question.options.length !== 4 ||
-            typeof question.correctAnswerIndex !== "number" ||
-            question.correctAnswerIndex < 0 ||
-            question.correctAnswerIndex > 3
+            !q.questionText ||
+            !Array.isArray(q.options) ||
+            q.options.length !== 4 ||
+            q.options.some(
+              (option) => typeof option !== "string" || !option.trim(),
+            ) ||
+            !Number.isInteger(q.correctAnswerIndex) ||
+            q.correctAnswerIndex < 0 ||
+            q.correctAnswerIndex > 3
           ) {
-            return res.status(500).json({
-              message: "AI generated an invalid question structure",
-            });
+            throw new Error("AI returned an invalid question.");
           }
-        }
 
-        // -------------------------------------------------
-        // Save AI questions as Mock Test questions
-        // -------------------------------------------------
-
-        const questionsToSave = generatedQuestions.map((question) => ({
-          exam: examCategory,
-          subject: subject || "General",
-          topic: question.topic || "General",
-          questionText: question.questionText,
-          options: question.options,
-          correctAnswerIndex: question.correctAnswerIndex,
-          explanation: question.explanation || "",
-          difficulty: difficulty || "Medium",
-          isImportant: false,
-          source: "mock-test",
-        }));
+          return {
+            exam: examCategory,
+            subject: subject || "General",
+            topic: q.topic || "General",
+            questionText: q.questionText.trim(),
+            options: q.options,
+            correctAnswerIndex: q.correctAnswerIndex,
+            explanation: q.explanation || "",
+            difficulty: difficulty || "Medium",
+            isImportant: false,
+            source: "mock-test",
+          };
+        });
 
         await Question.insertMany(questionsToSave);
+        aiGenerated = questionsToSave.length;
 
-        console.log(
-          `${generatedQuestions.length} Mock Test questions generated by AI`,
-        );
+        console.log(`${aiGenerated} AI questions saved.`);
       } catch (aiError) {
-        console.error("AI Mock Test generation error:", aiError);
+        console.error("AI generation unavailable:", aiError.message);
 
-        // Specific Gemini overload error
-        if (aiError.message && aiError.message.includes("503")) {
+        // Continue if the database already has enough questions.
+        const refreshedCount = await Question.countDocuments(filter);
+
+        if (refreshedCount < requestedQuestions) {
           return res.status(503).json({
             message:
-              "AI service is temporarily busy. Please try generating the mock test again later.",
+              "There are not enough questions for this selection, and AI generation is temporarily unavailable. Try another subject or question count.",
+            availableQuestions: refreshedCount,
+            requestedQuestions,
           });
         }
-
-        return res.status(500).json({
-          message:
-            "Failed to generate missing mock test questions: " +
-            aiError.message,
-        });
       }
     }
 
-    // -------------------------------------------------
-    // 6. Get ONLY Mock Test questions
-    // -------------------------------------------------
-
-    const questions = await Question.aggregate([
-      {
-        $match: filter,
-      },
-      {
-        $sample: {
-          size: requestedQuestions,
-        },
-      },
+    // 5. Fetch enough questions to create the test
+    let questions = await Question.aggregate([
+      { $match: filter },
+      { $sample: { size: requestedQuestions } },
     ]);
 
-    // -------------------------------------------------
-    // 7. Safety check
-    // -------------------------------------------------
+    // If AI questions were saved with a difficulty that did not
+    // match the original filter, use the broader exam/subject filter.
+    if (questions.length < requestedQuestions) {
+      const fallbackFilter = {
+        exam: examCategory,
+        source: "mock-test",
+      };
+
+      if (subject) {
+        fallbackFilter.subject = subject;
+      }
+
+      questions = await Question.aggregate([
+        { $match: fallbackFilter },
+        { $sample: { size: requestedQuestions } },
+      ]);
+    }
 
     if (questions.length < requestedQuestions) {
       return res.status(400).json({
-        message: "Unable to collect enough Mock Test questions.",
+        message: "Not enough matching mock-test questions are available.",
+        availableQuestions: questions.length,
+        requestedQuestions,
       });
     }
 
-    // -------------------------------------------------
-    // 8. Convert to MockTest format
-    // -------------------------------------------------
-
+    // 6. Build and save the mock test
     const mockQuestions = questions.map((question) => ({
       questionText: question.questionText,
       options: question.options,
       correctAnswerIndex: question.correctAnswerIndex,
     }));
-
-    // -------------------------------------------------
-    // 9. Create Mock Test
-    // -------------------------------------------------
 
     const title = subject
       ? `${examCategory} - ${subject} Mock Test`
@@ -344,29 +320,27 @@ Use exactly this format:
       title,
       examCategory,
       subject: subject || "",
-      durationMinutes: Number(durationMinutes),
+      durationMinutes: duration,
       questions: mockQuestions,
     });
 
     const savedMockTest = await mockTest.save();
 
-    // -------------------------------------------------
-    // 10. Send response
-    // -------------------------------------------------
-
-    res.status(201).json({
+    return res.status(201).json({
       message: "Mock test generated successfully",
       mockTest: savedMockTest,
-      aiGenerated: missingQuestions > 0 ? missingQuestions : 0,
+      aiGenerated,
+      usedExistingQuestions: mockQuestions.length - aiGenerated,
     });
   } catch (error) {
     console.error("Mock test generation error:", error);
 
-    res.status(500).json({
+    return res.status(500).json({
       message: "Failed to generate mock test: " + error.message,
     });
   }
 };
+
 // Delete a mock test
 const deleteMockTest = async (req, res) => {
   try {
